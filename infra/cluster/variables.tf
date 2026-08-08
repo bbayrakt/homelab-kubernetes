@@ -127,3 +127,20 @@ variable "talos_maintenance_device" {
   type        = string
   default     = "eth0"
 }
+
+variable "cilium_chart_version" {
+  description = "Cilium Helm chart version rendered into the Talos inline manifest (`data.helm_template.cilium`). Bump here to upgrade Cilium."
+  type        = string
+}
+
+## External access / GitOps
+variable "gateway_api_crds_version" {
+  description = "Gateway API CRD bundle version embedded as a Talos inline manifest. Must match the version Cilium 1.20 documents as supported (v1.6.1)."
+  type        = string
+  default     = "v1.6.1"
+}
+
+variable "artifacts_dir" {
+  description = "Directory to write generated talosconfig/kubeconfig artifacts to. Overridden by Terragrunt to point at the REAL unit dir (Terragrunt runs from a .terragrunt-cache working dir by default)."
+  type        = string
+}

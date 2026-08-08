@@ -44,3 +44,15 @@ variable "artifacts_dir" {
   type        = string
   default     = "artifacts"
 }
+
+variable "cilium_inline_manifest" {
+  description = "Rendered Cilium manifest (data.helm_template.cilium.manifest) embedded as a Talos inline manifest on controlplane nodes."
+  type        = string
+  sensitive   = true
+}
+
+variable "gateway_api_inline_manifest" {
+  description = "Gateway API CRD bundle (pinned release's standard-install.yaml) embedded as a Talos inline manifest on controlplane nodes — listed before the Cilium manifest."
+  type        = string
+  sensitive   = true
+}

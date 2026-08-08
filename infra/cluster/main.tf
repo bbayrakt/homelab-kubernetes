@@ -24,5 +24,9 @@ module "talos_cluster" {
   kubernetes_version = var.kubernetes_version
   talos_installer    = local.talos_installer
   nodes              = local.talos_cluster_nodes
-  artifacts_dir      = "${path.root}/artifacts"
+  artifacts_dir      = var.artifacts_dir
+
+  cilium_inline_manifest = data.helm_template.cilium.manifest
+
+  gateway_api_inline_manifest = local.gateway_api_inline_manifest
 }

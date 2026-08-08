@@ -14,6 +14,14 @@ terraform {
       source  = "hashicorp/local"
       version = "~> 2.5"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 3.0"
+    }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.0"
+    }
   }
 
   # Optional: point at your state backend (S3/GCS/Azure/SOPS-encrypted local).
