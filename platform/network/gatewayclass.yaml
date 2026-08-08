@@ -1,7 +1,3 @@
-# Cilium GatewayClass — Cilium v1.16+ does NOT create a default GatewayClass;
-# you must define it. The `homelab` Gateway references gatewayClassName: cilium.
-# A LoadBalancer service type triggers LB-IPAM to allocate 192.168.0.200 from
-# the homelab-lb pool (announced via L2), which external-dns then publishes.
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:

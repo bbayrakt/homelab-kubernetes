@@ -1,15 +1,10 @@
 ---
-# Cilium Envoy Gateway terminating HTTP + HTTPS on fixed address 192.168.0.200
-# (LB-IPAM). Accepts routes from any namespace.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: homelab
   namespace: gateway
   annotations:
-    # cert-manager gateway-shim: issue a cert for this listener's hostname and
-    # store it in the certificateRefs Secret (argocd-tls) in this namespace,
-    # using the ClusterIssuer (cluster-scoped, so no namespaced Issuer needed).
     cert-manager.io/cluster-issuer: letsencrypt-dns01
 spec:
   gatewayClassName: cilium
@@ -24,13 +19,13 @@ spec:
         namespaces:
           from: All
     - name: https
-      hostname: argocd.icaninto.space # cert-manager uses this as the cert dnsName
+      hostname: argocd.icaninto.space
       port: 443
       protocol: HTTPS
       tls:
         mode: Terminate
         certificateRefs:
-          - name: argocd-tls # provisioned by cert-manager into this namespace
+          - name: argocd-tls
             kind: Secret
       allowedRoutes:
         namespaces:

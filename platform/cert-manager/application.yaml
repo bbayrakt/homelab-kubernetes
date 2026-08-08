@@ -12,9 +12,6 @@ spec:
     targetRevision: v1.21.1
     helm:
       releaseName: cert-manager
-      # Enable Gateway API support (the gateway-shim that issues certs for
-      # cert-manager.io annotations on HTTPRoutes). Since cert-manager 1.15 this
-      # is a controller config flag, not a feature-gate.
       values: |
         config:
           gatewayAPI:
