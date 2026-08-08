@@ -1,3 +1,4 @@
+apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cert-manager-app
@@ -5,6 +6,7 @@ metadata:
 spec:
   project: default
   source:
+
     repoURL: quay.io/jetstack/charts
     chart: cert-manager
     targetRevision: v1.21.1
