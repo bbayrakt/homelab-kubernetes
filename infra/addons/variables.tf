@@ -25,7 +25,7 @@ variable "cloudflare_api_token" {
 }
 
 variable "argocd_admin_password" {
-  description = "PLAINTEXT ArgoCD admin password. Pre-seeded in the argocd-initial-admin-secret (which ArgoCD reads on first start) and used by the argocd provider to authenticate. Held in the shared SOPS secrets file — no bcrypt needed."
+  description = "PLAINTEXT ArgoCD admin password used by the argocd provider to authenticate. Held in the shared SOPS secrets file."
   type        = string
   default     = ""
   sensitive   = true

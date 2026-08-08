@@ -10,6 +10,8 @@ dependencies {
   paths = ["../addons"]
 }
 
+# ArgoCD may still be starting right after addons installs it; retry transient
+# provider connection failures.
 errors {
   retry "argo_not_ready" {
     retryable_errors = [
@@ -24,8 +26,4 @@ errors {
   }
 }
 
-inputs = {
-  kubeconfig_path       = local.env.locals.kubeconfig_path
-  gitops_repo_url       = local.env.locals.gitops_repo_url
-  argocd_admin_password = local.env.locals.secrets.argocd_admin_password
-}
+inputs = local.env.locals.argocd_config
