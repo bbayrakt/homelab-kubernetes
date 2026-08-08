@@ -5,7 +5,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: admin@icaninto.space # TODO: set your ACME account email
+    email: berk@infrabytes.dev
     privateKeySecretRef:
       name: letsencrypt-dns01-account-key
     solvers:
