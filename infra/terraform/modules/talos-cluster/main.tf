@@ -54,6 +54,7 @@ data "talos_client_configuration" "this" {
   cluster_name         = var.cluster_name
   client_configuration = talos_machine_secrets.this.client_configuration
   nodes                = keys(var.nodes)
+  endpoints = local.controlplane_ips
 }
 
 resource "talos_cluster_kubeconfig" "this" {
