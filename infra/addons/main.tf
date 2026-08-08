@@ -21,6 +21,7 @@ resource "helm_release" "argo_cd" {
 
   values = [
     yamlencode({
+      fullnameOverride = "argocd"
       server = {
         service = { type = "ClusterIP" }
         ingress = { enabled = false }
