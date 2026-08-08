@@ -12,13 +12,16 @@ spec:
     targetRevision: v1.21.1
     helm:
       releaseName: cert-manager
+      # Enable Gateway API support (the gateway-shim that issues certs for
+      # cert-manager.io annotations on HTTPRoutes). Since cert-manager 1.15 this
+      # is a controller config flag, not a feature-gate.
+      values: |
+        config:
+          gatewayAPI:
+            enabled: true
       parameters:
         - name: installCRDs
           value: "true"
-        # Enable the gateway-shim controller so cert-manager provisions certs
-        # from the cert-manager.io/issuer+hostname annotations on HTTPRoutes.
-        - name: featureGates
-          value: "GatewayAPI=true"
   destination:
     namespace: cert-manager
     server: https://kubernetes.default.svc
