@@ -1,0 +1,68 @@
+## Proxmox API connection
+# ENDPOINT=https://pve1.lan:8006 works too; or PROXMOX_VE_ENDPOINT env
+proxmox_endpoint = "https://pve1.lan:8006/"
+
+# Use EITHER an API token (recommended) or username/password.
+proxmox_api_token = "terraform@pve!provider=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+# proxmox_username = "root@pam"
+# proxmox_password = "ch@nge-me"
+
+proxmox_insecure = true
+
+## Cluster
+cluster_name     = "talos-cluster"
+cluster_endpoint = "https://10.0.0.10:6443"
+
+## Versions
+talos_version         = "v1.13.8"
+kubernetes_version    = "1.36.0"
+# Scheme ID from Image Factory. Default: standard (non-secureboot) Talos ISO.
+# For a custom build (QEMU guest agent, etc.), build at https://factory.talos.dev
+# and paste the scheme ID here — it must match the talos_iso_name below.
+talos_scheme_id       = "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba"
+talos_arch            = "amd64"
+# Exact ISO artifact name from the Image Factory URL (e.g. `metal-amd64`,
+# or `metal-amd64-secureboot` only if you've set up Sidero-signed OVMF firmware).
+talos_iso_name        = "metal-amd64"
+
+## QEMU guest agent (optional)
+enable_qemu_guest_agent = false  # requires extension + matching talos_scheme_id above
+
+## Proxmox defaults
+proxmox_iso_datastore  = "local"
+proxmox_disk_datastore = "local-lvm"
+proxmox_network_bridge = "vmbr0"
+proxmox_iso_nodes      = ["pve1"]
+# Standard (non-secureboot) Talos ISO, so Secure Boot is disabled. To enable
+# it you'd need the Sidero-signed OVMF firmware (see Talos Secure Boot docs).
+secure_boot = false
+
+## Nodes
+nodes = {
+  "10.0.0.10" = {
+    role         = "controlplane"
+    hostname     = "talos-cp-1"
+    proxmox_node = "pve1"
+    vm_id        = 210
+    ipv4_address = "10.0.0.10"
+    ipv4_prefix  = 24
+    ipv4_gateway = "10.0.0.1"
+    dns_servers  = ["10.0.0.1"]
+    cores        = 4
+    memory       = 8192
+    disk_size    = 40
+  }
+  "10.0.0.11" = {
+    role         = "worker"
+    hostname     = "talos-worker-1"
+    proxmox_node = "pve1"
+    vm_id        = 211
+    ipv4_address = "10.0.0.11"
+    ipv4_prefix  = 24
+    ipv4_gateway = "10.0.0.1"
+    dns_servers  = ["10.0.0.1"]
+    cores        = 4
+    memory       = 16384
+    disk_size    = 80
+  }
+}

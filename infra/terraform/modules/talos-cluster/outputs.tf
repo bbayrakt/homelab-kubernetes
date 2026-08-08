@@ -1,0 +1,20 @@
+output "kubeconfig" {
+  description = "Path to the generated kubeconfig file."
+  value       = "${var.artifacts_dir}/kubeconfig"
+}
+
+output "talosconfig" {
+  description = "Path to the generated talosctl config file."
+  value       = "${var.artifacts_dir}/talosconfig"
+}
+
+output "first_controlplane_ip" {
+  description = "IP of the first controlplane node (bootstrap target)."
+  value       = local.first_controlplane_ip
+}
+
+output "talos_machine_secrets" {
+  description = "Cluster machine secrets (back these up)."
+  value       = talos_machine_secrets.this.machine_secrets
+  sensitive   = true
+}

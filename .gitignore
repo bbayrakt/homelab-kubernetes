@@ -1,0 +1,14 @@
+# Terraform state and caches
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Secrets / local overrides
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Locally generated artifacts
+artifacts/

@@ -1,0 +1,33 @@
+machine:
+  install:
+    disk: ${install_disk}
+    image: ${install_img}
+  network:
+    interfaces:
+      - interface: ${interface_name}
+        addresses:
+          - ${ip_address}
+        routes:
+          - network: 0.0.0.0/0
+            gateway: ${gateway}
+    nameservers:
+%{ for ns in dns_servers ~}
+      - ${ns}
+%{ endfor ~}
+%{ if length(node_labels) > 0 }
+  nodeLabels:
+%{ for k, v in node_labels ~}
+    ${k}: ${v}
+%{ endfor ~}
+%{ endif }
+%{ if length(node_taints) > 0 }
+  nodeTaints:
+%{ for t in node_taints ~}
+    - key: ${t}
+%{ endfor ~}
+%{ endif }
+---
+apiVersion: v1alpha1
+kind: HostnameConfig
+hostname: ${hostname}
+auto: off
