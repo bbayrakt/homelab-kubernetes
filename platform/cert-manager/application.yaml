@@ -15,6 +15,10 @@ spec:
       parameters:
         - name: installCRDs
           value: "true"
+        # Enable the gateway-shim controller so cert-manager provisions certs
+        # from the cert-manager.io/issuer+hostname annotations on HTTPRoutes.
+        - name: featureGates
+          value: "GatewayAPI=true"
   destination:
     namespace: cert-manager
     server: https://kubernetes.default.svc
