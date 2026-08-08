@@ -1,5 +1,6 @@
 # Terraform state and caches
 .terraform/
+.terragrunt-cache/
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
@@ -9,6 +10,8 @@ terraform.tfvars
 terraform.tfvars.json
 *.auto.tfvars
 *.auto.tfvars.json
+.sops-age-key*
+age-key.txt
 
 # Locally generated artifacts
 artifacts/
