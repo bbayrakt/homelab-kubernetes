@@ -1,16 +1,18 @@
+# ArgoCD HTTPRoute: argocd.icaninto.space -> argocd-server:80 (cluster-internal
+# HTTP; TLS terminated at the Cilium Gateway). The TLS cert is handled by the
+# cert-manager annotation on the Gateway (platform/network/gateway.yaml), not
+# on this route. external-dns creates the A record from this route's hostname.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: argocd
   namespace: argocd
-  annotations:
-    cert-manager.io/issuer: letsencrypt-dns01
-    cert-manager.io/hostname: argocd.icaninto.space
 spec:
   parentRefs:
     - name: homelab
       namespace: gateway
       sectionName: https
+      # Cross-namespace attach is permitted by the Gateway's allowedRoutes: All
   hostnames:
     - argocd.icaninto.space
   rules:
