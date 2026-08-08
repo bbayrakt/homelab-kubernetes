@@ -17,5 +17,5 @@ spec:
     - argocd.icaninto.space
   rules:
     - backendRefs:
-        - name: argocd-server
+        - name: argo-cd-argocd-server
           port: 80
