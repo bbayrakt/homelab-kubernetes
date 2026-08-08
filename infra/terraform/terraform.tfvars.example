@@ -26,13 +26,25 @@ talos_arch            = "amd64"
 talos_iso_name        = "metal-amd64"
 
 ## QEMU guest agent (optional)
-enable_qemu_guest_agent = false  # requires extension + matching talos_scheme_id above
+enable_qemu_guest_agent = false  # requires extension in talos_system_extensions below
+
+## Image customizations
+# Official Image Factory system extensions baked into every node image
+# (siderolabs/qemu-guest-agent is appended automatically when the guest
+# agent is enabled above).
+talos_system_extensions = ["siderolabs/intel-ucode"]
+# Interface Talos configures in maintenance mode via the `ip=` kernel
+# argument. Must be the NIC's name at initramfs parse time: the kernel
+# default `eth0` (udev renames it to ens18 only later).
+talos_maintenance_device = "eth0"
 
 ## Proxmox defaults
 proxmox_iso_datastore  = "local"
 proxmox_disk_datastore = "local-lvm"
 proxmox_network_bridge = "vmbr0"
-proxmox_iso_nodes      = ["pve1"]
+# LVM-thin (local-lvm) only supports `raw`; use `qcow2` for directory storage.
+proxmox_disk_format    = "raw"
+proxmox_disk_ssd       = true
 # Standard (non-secureboot) Talos ISO, so Secure Boot is disabled. To enable
 # it you'd need the Sidero-signed OVMF firmware (see Talos Secure Boot docs).
 secure_boot = false
@@ -48,6 +60,7 @@ nodes = {
     ipv4_prefix  = 24
     ipv4_gateway = "10.0.0.1"
     dns_servers  = ["10.0.0.1"]
+    mac_address  = "BC:24:11:00:00:D2"
     cores        = 4
     memory       = 8192
     disk_size    = 40
@@ -61,6 +74,7 @@ nodes = {
     ipv4_prefix  = 24
     ipv4_gateway = "10.0.0.1"
     dns_servers  = ["10.0.0.1"]
+    mac_address  = "BC:24:11:00:00:D3"
     cores        = 4
     memory       = 16384
     disk_size    = 80
