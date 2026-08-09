@@ -8,6 +8,7 @@ variable "nodes" {
     cores        = number
     memory       = number
     disk_size    = number
+    longhorn_disk_size = number
     datastore_id = string
     cpu_type     = string
     mac_address  = string

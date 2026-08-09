@@ -45,6 +45,22 @@ resource "proxmox_virtual_environment_vm" "node" {
     ssd          = var.disk_ssd
   }
 
+  # Dedicated Longhorn storage disk (per-node, on local-lvm thin pool). Only
+  # added for nodes with longhorn_disk_size > 0.
+  dynamic "disk" {
+    for_each = each.value.longhorn_disk_size > 0 ? [each.value] : []
+
+    content {
+      datastore_id = disk.value.datastore_id
+      interface    = "scsi1"
+      size         = disk.value.longhorn_disk_size
+      file_format  = var.disk_format
+      cache        = "writethrough"
+      discard      = "on"
+      ssd          = var.disk_ssd
+    }
+  }
+
   efi_disk {
     datastore_id      = each.value.datastore_id
     type              = "4m"
