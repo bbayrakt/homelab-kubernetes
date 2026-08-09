@@ -14,6 +14,7 @@ variable "nodes" {
     cores        = optional(number, 2)
     memory       = optional(number, 4096)
     disk_size    = optional(number, 40)
+    longhorn_disk_size = optional(number, 0)
     datastore_id = optional(string, "")
     cpu_type     = optional(string, "host")
     node_labels  = optional(map(string), {})

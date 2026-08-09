@@ -28,7 +28,7 @@ resource "talos_machine_configuration_apply" "this" {
       templatefile("${path.module}/templates/node-config.yaml.tmpl", {
         hostname       = each.value.hostname
         install_disk   = each.value.install_disk
-        install_img    = var.talos_installer
+        install_img    = each.value.install_img
         ip_address     = format("%s/%d", each.value.ipv4_address, each.value.ipv4_prefix)
         gateway        = each.value.ipv4_gateway
         dns_servers    = each.value.dns_servers
@@ -82,6 +82,23 @@ resource "talos_machine_configuration_apply" "this" {
         }
       })
     ],
+    # Worker-only Longhorn storage disk: Talos carves the dedicated scsi1
+    # disk into a volume mounted at /var/mnt/longhorn (the UserVolumeConfig
+    # data path the Longhorn Helm chart uses as its default).
+    # https://docs.siderolabs.com/kubernetes-guides/csi/longhorn
+    each.value.role == "worker" ? [
+      yamlencode({
+        apiVersion = "v1alpha1"
+        kind       = "UserVolumeConfig"
+        name       = "longhorn"
+        volumeType = "disk"
+        provisioning = {
+          diskSelector = {
+            match = "'/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1' in disk.symlinks"
+          }
+        }
+      })
+    ] : [],
     # Controlplane-only inline manifests, applied in order:
     #  1. Gateway API CRDs — must exist before the Cilium gateway controller
     #     starts (Cilium 1.20 requires Gateway API v1.6.1 CRDs).

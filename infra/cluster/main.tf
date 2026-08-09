@@ -22,7 +22,6 @@ module "talos_cluster" {
   cluster_endpoint   = var.cluster_endpoint
   talos_version      = var.talos_version
   kubernetes_version = var.kubernetes_version
-  talos_installer    = local.talos_installer
   nodes              = local.talos_cluster_nodes
   artifacts_dir      = var.artifacts_dir
 

@@ -55,12 +55,6 @@ variable "kubernetes_version" {
   default     = "1.36.0"
 }
 
-variable "talos_scheme_id" {
-  description = "Image Factory scheme ID for the Talos ISO/installer (arch/security-specific). See https://factory.talos.dev. Default matches the standard metal-amd64 ISO for v1.13.x."
-  type        = string
-  default     = "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba"
-}
-
 variable "talos_arch" {
   description = "CPU architecture for the Talos image."
   type        = string
