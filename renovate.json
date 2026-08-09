@@ -53,6 +53,23 @@
     },
     {
       "customType": "regex",
+      "description": "Helm CLI version pinned in the pre-commit workflow",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
+      "matchStrings": ["\\n\\s*version:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "helm/helm",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "PyYAML version pinned in the pre-commit workflow",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
+      "matchStrings": ["pyyaml==(?<currentValue>[^\\s]+)"],
+      "depNameTemplate": "pyyaml",
+      "datasourceTemplate": "pypi"
+    },
+    {
+      "customType": "regex",
       "description": "Talos Linux version",
       "managerFilePatterns": ["/^infra\\/env\\.hcl$/"],
       "matchStrings": ["talos_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""],
