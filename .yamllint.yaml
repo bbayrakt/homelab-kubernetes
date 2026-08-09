@@ -1,0 +1,14 @@
+---
+extends: default
+ignore: |
+  **/secrets.sops.yaml
+rules:
+  line-length:
+    max: 160
+    level: warning
+  document-start: disable
+  truthy:
+    check-keys: false
+    level: warning
+  indentation:
+    indent-sequences: whatever

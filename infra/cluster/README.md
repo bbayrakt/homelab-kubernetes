@@ -11,7 +11,7 @@ in the shared SOPS-encrypted `../secrets.sops.yaml`.
 ## Overview
 
 - **Proxmox side** (`bpg/proxmox`): downloads each node's Talos ISO straight onto
-  the target node's datastore via the PVE *download-url* API, then creates UEFI 
+  the target node's datastore via the PVE *download-url* API, then creates UEFI
   (`ovmf`/q35) VMs booting from that ISO.
 - **Image Factory** (`talos_image_factory_schematic`): one content-addressed
   schematic per node, baking in the system extensions and a static `ip=`
@@ -22,7 +22,7 @@ in the shared SOPS-encrypted `../secrets.sops.yaml`.
   (the bootstrap resource retries internally while the controlplane finishes
   installing), and writes out `artifacts/kubeconfig` and `artifacts/talosconfig`.
 - **Cilium CNI** (`hashicorp/helm`): the Cilium Helm chart is rendered locally
-  into a single manifest, disabled Talos's default Flannel 
+  into a single manifest, disabled Talos's default Flannel
   (`cluster.network.cni.name: none`), and embeds the manifest as a controlplane
   **inline manifest** that Talos applies automatically during bootstrap.
 
@@ -74,7 +74,7 @@ terragrunt apply
 
 ISOs are content-addressed (`talos-<hostname>-<schematic-id-prefix>-<version>.iso`)
 and managed by `proxmox_download_file` with `overwrite = true`. Normal
-`terragrunt apply` runs never re-download an unchanged ISO — the download
+`terragrunt apply` runs never re-download an unchanged ISO. The download
 resource is only replaced when its URL (i.e. the schematic/config) changes.
 
 A full `terragrunt destroy` *does* delete the ISOs (they're managed
@@ -109,7 +109,7 @@ boots etcd/controlplane, and the kubeconfig is written. VMs are left with
 installs once).
 
 > **First apply on an existing misprovisioned cluster:** destroy the VMs first
-> (`terragrunt run destroy`) — fresh disks are required for a clean install.
+> (`terragrunt run destroy`). Fresh disks are required for a clean install.
 
 ### Scaling up
 
@@ -121,7 +121,7 @@ Add another entry (with a free IP and unique `vm_id`) to the `nodes` map in
 The cluster uses Cilium as its CNI (Talos's default Flannel is disabled). Cilium
 is delivered the way the
 [Sidero docs recommend](https://docs.siderolabs.com/kubernetes-guides/cni/deploying-cilium)
-for production — an **inline manifest**:
+for production, as an **inline manifest**:
 
 - `cluster.network.cni.name: none` is patched into **every** node's machine
   config, so Talos never installs Flannel.
@@ -139,17 +139,17 @@ the manifest and re-applies the controlplane configs) → `talosctl upgrade-k8s`
 
 
 > Change only the values in `cilium.tf`'s `values` block to enable extras
-> (e.g. Hubble `hubble.enabled=true`, or kube-proxy-free) — then re-apply.
+> (e.g. Hubble `hubble.enabled=true`, or kube-proxy-free), then re-apply.
 
 ## Upgrading Talos
 
-1. **Existing running cluster:** Talos upgrades are in-place — you don't need to
+1. **Existing running cluster:** Talos upgrades are in-place, so you don't need to
    stage a new ISO on the nodes:
    ```sh
    talosctl --talosconfig artifacts/talosconfig upgrade -n <node> \
      --image=factory.talos.dev/installer/<scheme-id>:<new-version>
    ```
-   Only **adjacent minor upgrades** are supported — go through each minor's
+   Only **adjacent minor upgrades** are supported. Go through each minor's
    latest patch sequentially (e.g. v1.12.x -> v1.13.x).
    Kubernetes itself is upgraded separately:
    ```sh
@@ -160,7 +160,7 @@ the manifest and re-applies the controlplane configs) → `talosctl upgrade-k8s`
    `terragrunt apply` uses the new image:
    - `talos_version` (e.g. `v1.13.8 -> v1.14.2`)
    - `kubernetes_version` (e.g. `1.36.0 -> 1.37.0`)
-   - `talos_scheme_id` — the Image Factory scheme is **version/arch specific**;
+   - `talos_scheme_id`: the Image Factory scheme is **version/arch specific**;
      grab the matching ID from https://factory.talos.dev for the new version.
    - Per-node ISOs re-download automatically: the version is part of both the
      download URL and the ISO filename, so bumping `talos_version` changes the
@@ -179,7 +179,7 @@ agent must be enabled on the VM.
 1. Set `enable_qemu_guest_agent = true`. This appends
    `siderolabs/qemu-guest-agent` to `talos_system_extensions`, which get baked
    into every node's schematic/ISO. The *installed* system also needs the
-   extension — it comes from the installer image written into
+   extension. It comes from the installer image written into
    `machine.install.image`, which is built from `talos_scheme_id`; make sure
    that scheme includes the extension too.
 2. Add any other official extensions to `talos_system_extensions`
@@ -187,7 +187,7 @@ agent must be enabled on the VM.
 3. `terragrunt apply`, then reprovision nodes whose images need the
    extension (`terragrunt destroy` + `apply`, or a manual `talosctl reset`).
 
-> Only enable the guest agent when the extension is included — enabling it
+> Only enable the guest agent when the extension is included; enabling it
 > without the extension produces log spam and no functionality.
 
 # External access (Cilium L2 LB + Gateway API)
@@ -237,11 +237,11 @@ boots with (no separate ingress/load-balancer components):
   `ip=` kernel argument (`schematics.tf`) so maintenance mode comes up at the
   node's configured IP, and the machine config pins the same static IP on the
   node's interface. Two naming gotchas are handled:
-  - The `ip=` device must be `eth0` (`talos_maintenance_device`) — that's the
+  - The `ip=` device must be `eth0` (`talos_maintenance_device`); that's the
     NIC's name at initramfs parse time; udev renames it to `ens18` seconds
     later, so `ens18`/`enx*` (or an empty device) silently fail to apply.
   - The machine config interface must be the **MAC-based name**
-    (`enx<mac>`, derived from each node's pinned `mac_address`) — the `eth0`
+    (`enx<mac>`, derived from each node's pinned `mac_address`); the `eth0`
     alias doesn't survive the udev rename, but the MAC-based altname always
     resolves to the physical NIC.
   Note: `embeddedMachineConfiguration` in schematics is silently dropped by the
@@ -252,7 +252,7 @@ boots with (no separate ingress/load-balancer components):
   to node fields flow into the config patches and are re-applied to the running
   nodes on the next `terragrunt run apply`.
 - **Bootstrap pauses at phase 18/19 ("node not ready").** Expected with
-  `cni: none` — nodes can't become Ready until a CNI runs. Because Cilium is an
+  `cni: none`; nodes can't become Ready until a CNI runs. Because Cilium is an
   inline manifest, Talos applies it itself during bootstrap; the
   `talos_machine_bootstrap` resource retries internally. If an apply still ends
   not-ready, just re-run `terragrunt run apply` (idempotent).
@@ -260,5 +260,5 @@ boots with (no separate ingress/load-balancer components):
   `baseline` policy (they need `NET_RAW` in capabilities). Workaround: label the
   test namespace `pod-security.kubernetes.io/enforce=privileged`.
 - **CoreDNS + `bpf.masquerade`.** Known Cilium-on-Talos issue only if you later
-  enable `bpf.masquerade` while Talos's `forwardKubeDNSToHost` (default) is on, 
+  enable `bpf.masquerade` while Talos's `forwardKubeDNSToHost` (default) is on,
   `bpf.masquerade` is off by default here.
