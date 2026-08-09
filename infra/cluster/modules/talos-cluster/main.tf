@@ -52,6 +52,20 @@ resource "talos_machine_configuration_apply" "this" {
         }
       })
     ],
+    # Kubelet serving-cert rotation so kubelets get CA-signed serving certs
+    # (no --kubelet-insecure-tls for metrics-server):
+    # https://docs.siderolabs.com/kubernetes-guides/monitoring-and-observability/deploy-metrics-server
+    [
+      yamlencode({
+        machine = {
+          kubelet = {
+            extraArgs = {
+              "rotate-server-certificates" = "true"
+            }
+          }
+        }
+      })
+    ],
     # Controlplane-only inline manifests, applied in order:
     #  1. Gateway API CRDs — must exist before the Cilium gateway controller
     #     starts (Cilium 1.20 requires Gateway API v1.6.1 CRDs).
@@ -60,6 +74,13 @@ resource "talos_machine_configuration_apply" "this" {
     each.value.role == "controlplane" ? [
       yamlencode({
         cluster = {
+          # Expose the etcd metrics endpoint for monitoring scrapes:
+          # https://docs.siderolabs.com/kubernetes-guides/monitoring-and-observability/etcd-metrics
+          etcd = {
+            extraArgs = {
+              "listen-metrics-urls" = "http://0.0.0.0:2381"
+            }
+          }
           inlineManifests = [
             { name = "gateway-api-crds", contents = var.gateway_api_inline_manifest },
             { name = "cilium", contents = var.cilium_inline_manifest },
@@ -71,7 +92,7 @@ resource "talos_machine_configuration_apply" "this" {
 }
 
 locals {
-  controlplane_ips    = [for k, v in var.nodes : k if v.role == "controlplane"]
+  controlplane_ips      = [for k, v in var.nodes : k if v.role == "controlplane"]
   first_controlplane_ip = local.controlplane_ips[0]
 }
 
@@ -86,7 +107,7 @@ data "talos_client_configuration" "this" {
   cluster_name         = var.cluster_name
   client_configuration = talos_machine_secrets.this.client_configuration
   nodes                = keys(var.nodes)
-  endpoints = local.controlplane_ips
+  endpoints            = local.controlplane_ips
 }
 
 resource "talos_cluster_kubeconfig" "this" {
