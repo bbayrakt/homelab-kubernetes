@@ -20,6 +20,14 @@ spec:
           storageMinimalAvailablePercentage: "10"
         persistence:
           defaultClass: true
+        httproute:
+          enabled: true
+          parentRefs:
+            - name: homelab
+              namespace: gateway
+              sectionName: longhorn-https
+          hostnames:
+            - longhorn.icaninto.space
   destination:
     namespace: longhorn-system
     server: https://kubernetes.default.svc
