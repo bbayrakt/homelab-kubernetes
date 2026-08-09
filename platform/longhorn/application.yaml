@@ -12,6 +12,8 @@ spec:
     helm:
       releaseName: longhorn
       values: |
+        preUpgradeChecker:
+          jobEnabled: false
         defaultSettings:
           defaultDataPath: /var/mnt/longhorn
           createDefaultDiskLabeledNodes: true
