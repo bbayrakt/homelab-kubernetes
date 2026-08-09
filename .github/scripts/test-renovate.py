@@ -280,6 +280,7 @@ def main() -> None:
                 for f in files:
                     for d in f.get("deps", []):
                         total_deps += 1
+                        dep_name = d.get("depName") or d.get("depNameShort") or "<unknown>"
                         if d.get("skipReason"):
                             status = f"[skipped: {d['skipReason']}]"
                         else:
@@ -292,7 +293,7 @@ def main() -> None:
                             else:
                                 status = "up to date"
                         print(
-                            f"  {manager} | {f['packageFile']} | {d['depName']} | "
+                            f"  {manager} | {f['packageFile']} | {dep_name} | "
                             f"{d.get('currentValue') or 'undefined'} | {d.get('datasource')} | {status}"
                         )
             if total_deps == 0:
