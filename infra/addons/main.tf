@@ -31,12 +31,36 @@ resource "helm_release" "argo_cd" {
         params = {
           "server.insecure" = true
         }
+        cm = merge(
+          { url = "https://argocd.icaninto.space" },
+          var.github_oidc_client_id != "" ? {
+            "dex.config" = <<-EOT
+              connectors:
+                - type: github
+                  id: github
+                  name: GitHub
+                  config:
+                    clientID: ${var.github_oidc_client_id}
+                    clientSecret: $dex.github.clientSecret
+                    orgs:
+                      - name: ${var.github_oidc_org}
+            EOT
+          } : {},
+        )
         secret = {
           createSecret                   = true
           # Stable hash from state
           argocdServerAdminPassword      = terraform_data.argocd_admin_password_bcrypt.output
           argocdServerAdminPasswordMtime = "2026-08-08T00:00:00Z"
+          extra                          = var.github_oidc_client_secret != "" ? {
+            "dex.github.clientSecret" = var.github_oidc_client_secret
+          } : {}
         }
+        rbac = var.github_admin_username != "" ? {
+          "policy.default" = ""
+          "policy.csv"     = "g, ${var.github_admin_username}, role:admin"
+          scopes           = "[groups, preferred_username]"
+        } : {}
         repositories = var.github_pat != "" ? [
           {
             name     = "homelab-kubernetes"

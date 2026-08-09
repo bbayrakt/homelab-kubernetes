@@ -30,3 +30,28 @@ variable "argocd_admin_password" {
   default     = ""
   sensitive   = true
 }
+
+variable "github_oidc_client_id" {
+  description = "GitHub OAuth app Client ID for ArgoCD SSO (public by design, not a secret)."
+  type        = string
+  default     = ""
+}
+
+variable "github_oidc_client_secret" {
+  description = "GitHub OAuth app Client Secret for ArgoCD SSO. Written into argocd-secret as dex.github.clientSecret."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "github_oidc_org" {
+  description = "GitHub org whose members are allowed to log in to ArgoCD (Dex GitHub connector orgs restriction)."
+  type        = string
+  default     = ""
+}
+
+variable "github_admin_username" {
+  description = "GitHub username granted role:admin in ArgoCD RBAC."
+  type        = string
+  default     = ""
+}
