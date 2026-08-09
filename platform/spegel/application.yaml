@@ -8,6 +8,7 @@ spec:
   source:
     repoURL: oci://ghcr.io/spegel-org/helm-charts/spegel
     targetRevision: 0.7.4
+    path: .
     helm:
       releaseName: spegel
       values: |
