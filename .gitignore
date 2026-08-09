@@ -13,5 +13,9 @@ terraform.tfvars.json
 .sops-age-key*
 age-key.txt
 
+# Python
+__pycache__/
+.ruff_cache/
+
 # Locally generated artifacts
 artifacts/

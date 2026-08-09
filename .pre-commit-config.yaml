@@ -43,6 +43,11 @@ repos:
     hooks:
       - id: renovate-config-validator
 
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.2
+    hooks:
+      - id: ruff-check
+
   - repo: local
     hooks:
       - id: sops-encrypted
