@@ -22,6 +22,10 @@ terraform {
       source  = "hashicorp/http"
       version = "~> 3.0"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 
   # Optional: point at your state backend (S3/GCS/Azure/SOPS-encrypted local).

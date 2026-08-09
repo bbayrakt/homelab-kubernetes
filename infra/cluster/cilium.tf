@@ -2,6 +2,94 @@
 # controlplane inline manifest. Talos applies it automatically during bootstrap.
 # See https://docs.siderolabs.com/kubernetes-guides/cni/deploying-cilium/
 #
+# Certs are generated once (stored in state) and pinned via values to keep the
+# chart render deterministic (see the values block below).
+resource "tls_private_key" "cilium_ca" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+resource "tls_self_signed_cert" "cilium_ca" {
+  private_key_pem   = tls_private_key.cilium_ca.private_key_pem
+  is_ca_certificate = true
+
+  subject {
+    common_name  = "Cilium CA"
+    organization = "homelab"
+  }
+
+  validity_period_hours = 87600
+
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "cert_signing",
+  ]
+}
+
+resource "tls_private_key" "hubble_server" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+resource "tls_cert_request" "hubble_server" {
+  private_key_pem = tls_private_key.hubble_server.private_key_pem
+
+  subject {
+    common_name = "*.default.hubble-grpc.cilium.io"
+  }
+
+  dns_names = ["*.default.hubble-grpc.cilium.io"]
+}
+
+resource "tls_locally_signed_cert" "hubble_server" {
+  cert_request_pem   = tls_cert_request.hubble_server.cert_request_pem
+  ca_private_key_pem = tls_private_key.cilium_ca.private_key_pem
+  ca_cert_pem        = tls_self_signed_cert.cilium_ca.cert_pem
+
+  is_ca_certificate = false
+
+  validity_period_hours = 87600
+
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "server_auth",
+    "client_auth",
+  ]
+}
+
+resource "tls_private_key" "hubble_relay_client" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+resource "tls_cert_request" "hubble_relay_client" {
+  private_key_pem = tls_private_key.hubble_relay_client.private_key_pem
+
+  subject {
+    common_name = "*.hubble-relay.cilium.io"
+  }
+
+  dns_names = ["*.hubble-relay.cilium.io"]
+}
+
+resource "tls_locally_signed_cert" "hubble_relay_client" {
+  cert_request_pem   = tls_cert_request.hubble_relay_client.cert_request_pem
+  ca_private_key_pem = tls_private_key.cilium_ca.private_key_pem
+  ca_cert_pem        = tls_self_signed_cert.cilium_ca.cert_pem
+
+  is_ca_certificate = false
+
+  validity_period_hours = 87600
+
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "client_auth",
+  ]
+}
+
 # `data.helm_template` renders the chart locally (ClientOnly dry-run, no cluster
 # contact), so it works even though the cluster only exists after bootstrap.
 data "helm_template" "cilium" {
