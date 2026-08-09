@@ -27,6 +27,7 @@ spec:
           storageMinimalAvailablePercentage: "10"
         persistence:
           defaultClass: true
+          defaultClassReplicaCount: 2
         httproute:
           enabled: true
           parentRefs:
