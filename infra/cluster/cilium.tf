@@ -128,6 +128,33 @@ data "helm_template" "cilium" {
       enabled: true
       enableAlpn: true
       enableAppProtocol: true
+    # WireGuard encryption (pod-to-pod + node-to-node). Talos ships
+    # CONFIG_WIREGUARD=y and keys are generated at agent runtime, so the render
+    # stays deterministic.
+    encryption:
+      enabled: true
+      type: wireguard
+      nodeEncryption: true
+    # Hubble mTLS certs are pinned explicitly: with hubble.tls.auto on, the chart
+    # generates a fresh CA + server cert on every render (no cluster to look up
+    # existing secrets from), making the output non-deterministic.
+    tls:
+      ca:
+        cert: ${base64encode(tls_self_signed_cert.cilium_ca.cert_pem)}
+        key: ${base64encode(tls_private_key.cilium_ca.private_key_pem)}
+    hubble:
+      tls:
+        auto:
+          enabled: false
+        server:
+          cert: ${base64encode(tls_locally_signed_cert.hubble_server.cert_pem)}
+          key: ${base64encode(tls_private_key.hubble_server.private_key_pem)}
+      relay:
+        enabled: true
+        tls:
+          client:
+            cert: ${base64encode(tls_locally_signed_cert.hubble_relay_client.cert_pem)}
+            key: ${base64encode(tls_private_key.hubble_relay_client.private_key_pem)}
     # Leader-election client rate limit for L2 announcement leases
     # (docs sizing: #services / leaseRenewDeadline; homelab small -> 16/32).
     k8sClientRateLimit:
