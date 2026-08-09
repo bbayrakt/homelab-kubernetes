@@ -50,6 +50,11 @@ repos:
 
   - repo: local
     hooks:
+      - id: argocd-apps-check
+        name: argocd apps resolve and render
+        entry: .github/scripts/check-argocd-apps.py
+        language: script
+        files: ^(platform|apps)/.*\.ya?ml$
       - id: terragrunt-validate
         name: terragrunt validate
         entry: .github/scripts/terragrunt-validate.sh
