@@ -46,6 +46,7 @@ Every change must pass `.pre-commit-config.yaml`; CI runs it on push/PR (`.githu
 - local `terragrunt-validate` hook (`.github/scripts/terragrunt-validate.sh`): `terragrunt validate --all` on `infra/`; skips when no SOPS age key is available (e.g. CI), so it enforces validation locally where secrets decrypt
 - `yamllint` (`.yamllint.yaml`; ignores `secrets.sops.yaml`, 160-char lines)
 - `kubeconform` on `platform/` and `apps/` YAML
+- local `argocd-apps-check` hook (`.github/scripts/check-argocd-apps.py`): for every `Application` manifest under `platform/`/`apps/`, pulls its helm/OCI chart at `targetRevision` and renders it with `helm template` using the manifest's release name, namespace, and values (skips when helm/PyYAML are missing)
 - `detect-secrets` (baseline: `.secrets.baseline`); never add plaintext secrets
 - `renovate-config-validator` for `renovate.json`
 - `ruff-check` (astral-sh/ruff-pre-commit) for Python files
@@ -57,7 +58,7 @@ Every change must pass `.pre-commit-config.yaml`; CI runs it on push/PR (`.githu
 
 - `infra/env.hcl` version pins → regex custom managers (`talos_version`, `kubernetes_version`, `cilium_chart_version`, `gateway_api_crds_version`). **Every version field in `env.hcl` MUST have a matching `customManagers` entry.**
 - Terraform `helm_release` (ArgoCD in `infra/addons/main.tf`) → `terraform` manager (helm datasource).
-- ArgoCD `Application` manifests under `platform/` and `apps/` (cert-manager, external-dns) → `argocd` manager (helm datasource; OCI charts like cert-manager resolve via the `docker` datasource on quay.io).
+- ArgoCD `Application` manifests under `platform/` and `apps/` (cert-manager, external-dns, spegel) → `argocd` manager (helm datasource; OCI charts like cert-manager and spegel resolve via the `docker` datasource on quay.io/ghcr.io).
 - Raw manifests (`metrics-server`, `kubelet-serving-cert-approver`) → `kubernetes` manager (image + API versions).
 - `.github/workflows/pre-commit.yaml` CLI pins → regex custom managers; `.pre-commit-config.yaml` → `pre-commit` manager.
 
