@@ -62,11 +62,13 @@
     },
     {
       "customType": "regex",
-      "description": "Kubernetes version",
+      "description": "Kubernetes version (latest stable release)",
       "managerFilePatterns": ["/^infra\\/env\\.hcl$/"],
       "matchStrings": ["kubernetes_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""],
-      "depNameTemplate": "kubernetes",
-      "datasourceTemplate": "kubernetes-api"
+      "depNameTemplate": "kubernetes/kubernetes",
+      "datasourceTemplate": "github-tags",
+      "extractVersionTemplate": "^v(?<version>.*)$",
+      "versioningTemplate": "semver"
     },
     {
       "customType": "regex",
