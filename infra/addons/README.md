@@ -1,17 +1,17 @@
-# addons — ArgoCD GitOps bootstrap
+# addons: ArgoCD GitOps bootstrap
 
 Installs ArgoCD and the GitOps scaffolding after the Talos cluster exists.
 
 ## What it manages
 
-### **ArgoCD**  
-ClusterIP only; no LB, the Cilium Gateway fronts it  (`server.insecure` so ArgoCD 
-serves plain HTTP behind the Gateway's TLS). Installs the ApplicationSet CRD + 
+### **ArgoCD**
+ClusterIP only; no LB, the Cilium Gateway fronts it  (`server.insecure` so ArgoCD
+serves plain HTTP behind the Gateway's TLS). Installs the ApplicationSet CRD +
 controller.
-### **ArgoCD default admin password** 
-The admin password is set deterministically on the chart 
+### **ArgoCD default admin password**
+The admin password is set deterministically on the chart
 (`configs.secret.argocdServerAdminPassword`, a bcrypt of the SOPS plaintext),
-so ArgoCD's `admin` password matches the SOPS value on fresh installs 
+so ArgoCD's `admin` password matches the SOPS value on fresh installs
 (ArgoCD regenerates `argocd-initial-admin-secret` with a random value
 otherwise).
 ### **cert-manager + external-dns secrets**

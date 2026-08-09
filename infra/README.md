@@ -8,7 +8,7 @@ argocd-config`.
 |-----------------|--------------------------------------------------------------------------|
 | `cluster`       | Talos cluster + Cilium (kube-proxy-free, L2 LB, Gateway API CRDs)        |
 | `addons`        | Installs ArgoCD, Cert Manager and ExternalDNS to bootstrap ArgoCD        |
-| `argocd-config` | Configures ArgoCD resources (ApplicationSets) — runs after ArgoCD exists |
+| `argocd-config` | Configures ArgoCD resources (ApplicationSets); runs after ArgoCD exists  |
 
 Run everything with one command from this directory:
 

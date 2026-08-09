@@ -1,4 +1,4 @@
-# argocd-config — ArgoCD resources (ApplicationSets)
+# argocd-config: ArgoCD resources (ApplicationSets)
 
 A separate Terragrunt unit that configures ArgoCD **after** it is installed
 (`addons`). Runs `cluster → addons → argocd-config` via `terragrunt apply
