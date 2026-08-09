@@ -33,7 +33,7 @@ locals {
 
     # Versions
     talos_version            = "v1.13.8"
-    kubernetes_version       = "1.36.0"
+    kubernetes_version       = "1.36.3"
     cilium_chart_version     = "1.20.0"
     gateway_api_crds_version = "v1.6.1"
 
