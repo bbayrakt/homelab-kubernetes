@@ -43,6 +43,7 @@ sops infra/secrets.sops.yaml         # edit secrets (re-encrypts on save)
 Every change must pass `.pre-commit-config.yaml`; CI runs it on push/PR (`.github/workflows/pre-commit.yaml`, pinned tool versions). Notable hooks:
 
 - `terragrunt_fmt` + `terraform_tflint` (config: `infra/cluster/.tflint.hcl`) for `infra/`
+- local `terragrunt-validate` hook (`.github/scripts/terragrunt-validate.sh`): `terragrunt validate --all` on `infra/`; skips when no SOPS age key is available (e.g. CI), so it enforces validation locally where secrets decrypt
 - `yamllint` (`.yamllint.yaml`; ignores `secrets.sops.yaml`, 160-char lines)
 - `kubeconform` on `platform/` and `apps/` YAML
 - `detect-secrets` (baseline: `.secrets.baseline`); never add plaintext secrets
