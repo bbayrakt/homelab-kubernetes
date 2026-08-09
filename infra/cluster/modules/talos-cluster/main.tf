@@ -52,9 +52,9 @@ resource "talos_machine_configuration_apply" "this" {
         }
       })
     ],
-    # Kubelet serving-cert rotation (Talos metrics-server guide): kubelets
-    # request serving certs signed by the cluster CA so metrics-server can
-    # verify them (no --kubelet-insecure-tls). All nodes.
+    # Kubelet serving-cert rotation so kubelets get CA-signed serving certs
+    # (no --kubelet-insecure-tls for metrics-server):
+    # https://docs.siderolabs.com/kubernetes-guides/monitoring-and-observability/deploy-metrics-server
     [
       yamlencode({
         machine = {
@@ -74,8 +74,8 @@ resource "talos_machine_configuration_apply" "this" {
     each.value.role == "controlplane" ? [
       yamlencode({
         cluster = {
-          # Expose the etcd metrics endpoint (Talos etcd-metrics guide) so a
-          # monitoring stack can scrape it.
+          # Expose the etcd metrics endpoint for monitoring scrapes:
+          # https://docs.siderolabs.com/kubernetes-guides/monitoring-and-observability/etcd-metrics
           etcd = {
             extraArgs = {
               "listen-metrics-urls" = "http://0.0.0.0:2381"
