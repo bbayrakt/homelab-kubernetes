@@ -1,0 +1,98 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "labels": ["dependencies"],
+  "ignorePaths": ["**/.terragrunt-cache/**", "**/artifacts/**"],
+
+  "argocd": {
+    "managerFilePatterns": ["/^platform\\/.*\\.ya?ml$/", "/^apps\\/.*\\.ya?ml$/"]
+  },
+  "kubernetes": {
+    "managerFilePatterns": ["/^platform\\/.*\\.ya?ml$/", "/^apps\\/.*\\.ya?ml$/"]
+  },
+  "pre-commit": {
+    "enabled": true
+  },
+
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Terragrunt CLI version pinned in the pre-commit workflow",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
+      "matchStrings": ["tg_version:\\s*(?<currentValue>[^\\s]+)"],
+      "depNameTemplate": "gruntwork-io/terragrunt",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "OpenTofu CLI version pinned in the pre-commit workflow",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
+      "matchStrings": ["tofu_version:\\s*(?<currentValue>[^\\s]+)"],
+      "depNameTemplate": "opentofu/opentofu",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "TFLint version pinned in the pre-commit workflow",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
+      "matchStrings": ["tflint_version:\\s*(?<currentValue>[^\\s]+)"],
+      "depNameTemplate": "terraform-linters/tflint",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Kubeconform version pinned in the pre-commit workflow",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
+      "matchStrings": ["kubeconform-version:\\s*(?<currentValue>[^\\s]+)"],
+      "depNameTemplate": "yannh/kubeconform",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Talos Linux version",
+      "managerFilePatterns": ["/^infra\\/env\\.hcl$/"],
+      "matchStrings": ["talos_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""],
+      "depNameTemplate": "siderolabs/talos",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Kubernetes version",
+      "managerFilePatterns": ["/^infra\\/env\\.hcl$/"],
+      "matchStrings": ["kubernetes_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""],
+      "depNameTemplate": "kubernetes",
+      "datasourceTemplate": "kubernetes-api"
+    },
+    {
+      "customType": "regex",
+      "description": "Cilium Helm chart version",
+      "managerFilePatterns": ["/^infra\\/env\\.hcl$/"],
+      "matchStrings": ["cilium_chart_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""],
+      "depNameTemplate": "cilium",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://helm.cilium.io/"
+    },
+    {
+      "customType": "regex",
+      "description": "Gateway API CRD version",
+      "managerFilePatterns": ["/^infra\\/env\\.hcl$/"],
+      "matchStrings": ["gateway_api_crds_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""],
+      "depNameTemplate": "kubernetes-sigs/gateway-api",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    }
+  ],
+
+  "packageRules": [
+    { "matchFileNames": [".github/**"], "groupName": "GitHub Actions", "groupSlug": "github-actions" },
+    { "matchFileNames": [".pre-commit-config.yaml"], "groupName": "pre-commit hooks", "groupSlug": "pre-commit" },
+    { "matchFileNames": ["infra/**"], "groupName": "Terraform", "groupSlug": "terraform" },
+    { "matchFileNames": ["platform/**"], "groupName": "platform", "groupSlug": "platform" },
+    { "matchFileNames": ["apps/**"], "groupName": "apps", "groupSlug": "apps" }
+  ]
+}
