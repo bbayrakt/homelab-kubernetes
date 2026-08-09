@@ -216,6 +216,27 @@ boots with (no separate ingress/load-balancer components):
 > [`../argocd-config/README.md`](../argocd-config/README.md) (ApplicationSets for
 > `platform/` + `apps/`).
 
+# Spegel (P2P image mirroring)
+
+[Spegel](https://spegel.app/) is a stateless OCI registry mirror that lets nodes
+serve container images to each other over a libp2p mesh, cutting external
+registry pulls and speeding up image distribution:
+
+- **containerd keeps unpacked layers**: the machine config in
+  `modules/talos-cluster/main.tf` writes `/etc/cri/conf.d/20-customization.part`
+  with `discard_unpacked_layers = false`, so nodes have local layers to serve.
+  `machine.files` is not apply-immediate, so the next `terragrunt apply` reboots
+  each node automatically (default `apply_mode = auto`); the provider retries
+  while the node comes back.
+- **App deployment**: Spegel runs as a privileged DaemonSet, delivered by ArgoCD
+  from `platform/spegel/` (OCI chart `ghcr.io/spegel-org/helm-charts/spegel`).
+  It is pointed at Talos's non-default containerd config path
+  (`spegel.containerdRegistryConfigPath: /etc/cri/conf.d/hosts`) so it can
+  write the mirror configuration that containerd reads.
+- **Pod Security**: the `spegel` namespace carries
+  `pod-security.kubernetes.io/enforce: privileged` (Talos PSA defaults are
+  restrictive; the DaemonSet mounts host paths and writes host config).
+
 ## Notes & pitfalls
 
 - **Don't lose the machine secrets** (`talos_machine_secrets`). The `talosconfig`
