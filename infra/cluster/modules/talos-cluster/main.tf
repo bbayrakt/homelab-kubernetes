@@ -66,6 +66,22 @@ resource "talos_machine_configuration_apply" "this" {
         }
       })
     ],
+    # Spegel P2P image mirroring: retain unpacked layers so nodes can serve
+    # images to peers.
+    # https://docs.siderolabs.com/kubernetes-guides/advanced-guides/spegel
+    [
+      yamlencode({
+        machine = {
+          files = [
+            {
+              path    = "/etc/cri/conf.d/20-customization.part"
+              op      = "create"
+              content = "[plugins.\"io.containerd.cri.v1.images\"]\n  discard_unpacked_layers = false\n"
+            }
+          ]
+        }
+      })
+    ],
     # Controlplane-only inline manifests, applied in order:
     #  1. Gateway API CRDs — must exist before the Cilium gateway controller
     #     starts (Cilium 1.20 requires Gateway API v1.6.1 CRDs).
