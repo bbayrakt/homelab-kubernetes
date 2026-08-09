@@ -18,17 +18,13 @@ variable "kubernetes_version" {
   type        = string
 }
 
-variable "talos_installer" {
-  description = "Full installer container image (scheme + version) written into machine.install.image."
-  type        = string
-}
-
 variable "nodes" {
   description = "Talos nodes. Key = node IP / talosctl address."
   type = map(object({
     role         = string
     hostname     = string
     install_disk = string
+    install_img  = string
     ipv4_address = string
     ipv4_prefix  = number
     ipv4_gateway = string

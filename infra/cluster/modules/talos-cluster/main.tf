@@ -28,7 +28,7 @@ resource "talos_machine_configuration_apply" "this" {
       templatefile("${path.module}/templates/node-config.yaml.tmpl", {
         hostname       = each.value.hostname
         install_disk   = each.value.install_disk
-        install_img    = var.talos_installer
+        install_img    = each.value.install_img
         ip_address     = format("%s/%d", each.value.ipv4_address, each.value.ipv4_prefix)
         gateway        = each.value.ipv4_gateway
         dns_servers    = each.value.dns_servers

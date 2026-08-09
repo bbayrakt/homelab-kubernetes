@@ -38,11 +38,15 @@ locals {
     gateway_api_crds_version = "v1.6.1"
 
     # Image Factory (standard, non-secureboot metal ISO)
-    talos_scheme_id = "e3fab82b561b5e559cdf1c0b1e5950c0e52700b9208a2cfaa5b18454796f3a7e"
-    talos_arch      = "amd64"
-    talos_iso_name  = "metal-amd64"
+    talos_arch     = "amd64"
+    talos_iso_name = "metal-amd64"
 
     enable_qemu_guest_agent = true
+
+    # System extensions baked into every node image (qemu-guest-agent is
+    # appended automatically). iscsi-tools + util-linux-tools are required by
+    # Longhorn on every node.
+    talos_system_extensions = ["siderolabs/intel-ucode", "siderolabs/iscsi-tools", "siderolabs/util-linux-tools"]
 
     # Proxmox storage/network defaults
     proxmox_iso_datastore  = "local"
