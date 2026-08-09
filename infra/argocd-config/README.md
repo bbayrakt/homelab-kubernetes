@@ -1,0 +1,40 @@
+# argocd-config — ArgoCD resources (ApplicationSets)
+
+A separate Terragrunt unit that configures ArgoCD **after** it is installed
+(`addons`). Runs `cluster → addons → argocd-config` via `terragrunt apply
+--all`. Keeping it separate from `addons` avoids the from-scratch chicken-and-egg:
+the argocd provider can only connect once the ArgoCD server exists.
+
+## What it manages
+
+- Two `ApplicationSet`s (`platform`, `apps`) via the **ArgoCD Terraform provider**
+  (`argoproj-labs/argocd`, `argocd_application_set`):
+  - `platform` → Meant for cluster admin-level resources, eg. cluster-scoped resources
+  - `apps` → Meant for regular applications.
+- ArgoCD reads GitOps content only from the git repo (`gitops_repo_url` from
+  `env.hcl`).
+
+The argocd provider connects to the in-cluster server (ClusterIP) via
+port-forwarding, deriving the cluster connection from the kubeconfig the
+`cluster` unit writes (`../cluster/artifacts/kubeconfig` via `env.hcl`), and
+logs in with the plaintext `admin` password (`argocd_admin_password`) whose
+bcrypt the `addons` unit sets on the chart (so it matches on fresh installs).
+ArgoCD serves plain HTTP (`server.insecure`), so the provider uses
+`plain_text = true`.
+
+## Usage
+
+```sh
+cd infra
+terragrunt apply --all     # cluster -> addons -> this unit
+# or this unit alone:  cd infra/argocd-config && terragrunt apply
+```
+
+Inputs come from `../env.hcl` (all unit inputs centralized there); no
+`KUBECONFIG` export needed.
+
+## Verify
+
+```sh
+kubectl -n argocd get applicationset,application
+```
