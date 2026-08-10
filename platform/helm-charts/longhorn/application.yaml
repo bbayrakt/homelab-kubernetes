@@ -28,6 +28,9 @@ spec:
         persistence:
           defaultClass: true
           defaultClassReplicaCount: 2
+        metrics:
+          serviceMonitor:
+            enabled: true
         httproute:
           enabled: true
           parentRefs:

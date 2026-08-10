@@ -43,6 +43,10 @@ locals {
 
     enable_qemu_guest_agent = true
 
+    # Talos machine log forwarding
+    talos_log_enabled = true
+    talos_log_port    = 5140
+
     # System extensions baked into every node image (qemu-guest-agent is
     # appended automatically). iscsi-tools + util-linux-tools are required by
     # Longhorn on every node.
@@ -138,6 +142,15 @@ locals {
     github_oidc_client_secret = local.secrets.github_oidc_client_secret
     github_oidc_org           = "infrabytes"
     github_admin_username     = "bbayrakt"
+
+    # Grafana Cloud (free tier) remote-write credentials. Usernames are the
+    # stack instance IDs, tokens are access-policy/API tokens scoped to
+    # metrics:write and logs:write. Consumed by the k8s-monitoring chart via
+    # the alloy-secrets Secret in the grafana-cloud namespace.
+    grafana_cloud_prometheus_username = local.secrets.grafana_cloud_prometheus_username
+    grafana_cloud_prometheus_token    = local.secrets.grafana_cloud_prometheus_token
+    grafana_cloud_loki_username       = local.secrets.grafana_cloud_loki_username
+    grafana_cloud_loki_token          = local.secrets.grafana_cloud_loki_token
   }
 
   # ---------------------------------------------------------------------------

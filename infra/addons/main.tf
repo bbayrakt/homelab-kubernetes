@@ -25,8 +25,20 @@ resource "helm_release" "argo_cd" {
       server = {
         service = { type = "ClusterIP" }
         ingress = { enabled = false }
+        metrics = { enabled = true }
       }
-      applicationSet = { enabled = true }
+      applicationSet = {
+        enabled = true
+        metrics = { enabled = true }
+      }
+      # Expose the /metrics endpoints as Services so the k8s-monitoring
+      # ServiceMonitors in platform/helm-charts/grafana-cloud can scrape them.
+      controller = {
+        metrics = { enabled = true }
+      }
+      repoServer = {
+        metrics = { enabled = true }
+      }
       configs = {
         params = {
           "server.insecure" = true
@@ -107,5 +119,28 @@ resource "kubernetes_secret_v1" "external_dns_cloudflare" {
   }
   data = {
     "cloudflare-api-token" = var.cloudflare_api_token
+  }
+}
+
+###
+# Grafana Cloud
+###
+
+resource "kubernetes_namespace_v1" "grafana_cloud" {
+  metadata { name = "grafana-cloud" }
+}
+
+# Credentials consumed by the k8s-monitoring chart (platform/helm-charts/
+# grafana-cloud). Key names match the destinations' usernameKey/passwordKey.
+resource "kubernetes_secret_v1" "grafana_cloud_credentials" {
+  metadata {
+    name      = "alloy-secrets"
+    namespace = kubernetes_namespace_v1.grafana_cloud.metadata[0].name
+  }
+  data = {
+    "prometheus-username" = var.grafana_cloud_prometheus_username
+    "prometheus-token"    = var.grafana_cloud_prometheus_token
+    "loki-username"       = var.grafana_cloud_loki_username
+    "loki-token"          = var.grafana_cloud_loki_token
   }
 }

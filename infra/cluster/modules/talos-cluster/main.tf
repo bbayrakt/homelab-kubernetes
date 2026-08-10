@@ -37,6 +37,25 @@ resource "talos_machine_configuration_apply" "this" {
         node_taints    = each.value.node_taints
       })
     ],
+    # Stream Talos service logs (machined, apid, containerd, kubelet, kernel,
+    # ...) as json_lines over TCP to the node's own IP, where the
+    # k8s-monitoring Alloy DaemonSet listens (hostNetwork).
+    # https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/logging-and-telemetry/logging
+    var.talos_log_enabled ? [
+      yamlencode({
+        machine = {
+          logging = {
+            destinations = [
+              {
+                endpoint  = "tcp://${each.value.ipv4_address}:${var.talos_log_port}/"
+                format    = "json_lines"
+                extraTags = { node = each.value.hostname }
+              }
+            ]
+          }
+        }
+      })
+    ] : [],
     # Disable Talos's built-in CNI (Flannel) so Cilium (installed as an inline
     # manifest below) is the only CNI, and disable kube-proxy: Cilium runs with
     # kubeProxyReplacement=true (required for L2 announcements). All nodes.

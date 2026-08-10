@@ -21,6 +21,8 @@ spec:
         policy: sync
         registry: txt
         txtOwnerId: homelab
+        serviceMonitor:
+          enabled: true
         env:
           - name: CF_API_TOKEN
             valueFrom:

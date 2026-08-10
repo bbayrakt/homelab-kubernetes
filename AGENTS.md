@@ -49,7 +49,7 @@ Every change must pass `.pre-commit-config.yaml`; CI runs it on push/PR (`.githu
 - `yamllint` (`.yamllint.yaml`; ignores `secrets.sops.yaml`, 160-char lines)
 - `kubeconform` on `platform/` and `apps/` YAML
 - local `argocd-apps-check` hook (`.github/scripts/check-argocd-apps.py`): for every `Application` manifest under `platform/`/`apps/`, pulls its helm/OCI chart at `targetRevision` and renders it with `helm template` using the manifest's release name, namespace, and values (skips when helm/PyYAML are missing)
-- `detect-secrets` (baseline: `.secrets.baseline`); never add plaintext secrets
+- `detect-secrets` (baseline: `.secrets.baseline`); never add plaintext secrets. The baseline carries **no result entries** — known false positives are filtered instead: `infra/secrets.sops.yaml` and `.sops.yaml` are excluded by file (encryption is enforced by the `sops-encrypted` hook), and lines containing `passwordKey:`/`secretKeyRef`/`argocdServerAdminPassword` (chart key names, not credentials) are excluded by line. Keep it that way: a baseline with drift-prone result entries gets auto-rewritten by the hook on every partial commit. If a new false-positive pattern appears, extend the `--exclude-lines`/`--exclude-files` regexes in the baseline's `filters_used` (regenerate via `detect-secrets scan --exclude-files '<regex>' --exclude-lines '<regex>'`) instead of adding result entries.
 - `renovate-config-validator` for `renovate.json`
 - `ruff-check` (astral-sh/ruff-pre-commit) for Python files
 - local `sops-encrypted` hook; `*.sops.yaml` files must be encrypted
