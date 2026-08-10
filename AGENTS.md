@@ -96,3 +96,4 @@ Verify any change with `.github/scripts/test-renovate.py` before pushing (uses t
 - `infra/cluster/README.md`: Talos provisioning, Cilium inline manifest, upgrades, pitfalls
 - `infra/addons/README.md`: ArgoCD bootstrap and adding apps
 - `infra/argocd-config/README.md`: ApplicationSets
+- `~/.config/opencode/plugins/README.md`: multi-session worktree workflow (plan → approve → implement → stop-for-review; worktree-guard plugin, `/new-worktree`, `/plan-approved`, `/finish-pr`)
