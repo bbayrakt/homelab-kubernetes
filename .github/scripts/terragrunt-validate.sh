@@ -13,4 +13,4 @@ if [[ -z "${SOPS_AGE_KEY:-}" && ! -f "$age_key_file" ]]; then
 fi
 
 cd "$root/infra"
-terragrunt validate --all
+${TERRAGRUNT_CMD:-terragrunt} validate --all
