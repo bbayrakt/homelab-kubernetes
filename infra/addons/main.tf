@@ -130,7 +130,7 @@ resource "kubernetes_namespace_v1" "grafana_cloud" {
   metadata {
     name = "grafana-cloud"
     labels = {
-      "pod.security.kubernetes.io/enforce" = "privileged"
+      "pod-security.kubernetes.io/enforce" = "privileged"
     }
   }
 }
