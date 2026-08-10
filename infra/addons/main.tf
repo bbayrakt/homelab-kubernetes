@@ -25,8 +25,20 @@ resource "helm_release" "argo_cd" {
       server = {
         service = { type = "ClusterIP" }
         ingress = { enabled = false }
+        metrics = { enabled = true }
       }
-      applicationSet = { enabled = true }
+      applicationSet = {
+        enabled = true
+        metrics = { enabled = true }
+      }
+      # Expose the /metrics endpoints as Services so the k8s-monitoring
+      # ServiceMonitors in platform/helm-charts/grafana-cloud can scrape them.
+      controller = {
+        metrics = { enabled = true }
+      }
+      repoServer = {
+        metrics = { enabled = true }
+      }
       configs = {
         params = {
           "server.insecure" = true

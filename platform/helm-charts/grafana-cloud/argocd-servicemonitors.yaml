@@ -1,0 +1,76 @@
+# ServiceMonitors for the argo-cd /metrics endpoints. Kept as raw manifests
+# because the argo-cd chart's serviceMonitor flags are gated on the
+# monitoring.coreos.com CRDs existing at install time (it is installed by
+# terraform in infra/addons, before the CRDs arrive).
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-application-controller
+  namespace: argocd
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-metrics
+      app.kubernetes.io/component: application-controller
+  namespaceSelector:
+    matchNames:
+      - argocd
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 60s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-applicationset-controller
+  namespace: argocd
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-metrics
+      app.kubernetes.io/component: applicationset-controller
+  namespaceSelector:
+    matchNames:
+      - argocd
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 60s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-server
+  namespace: argocd
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-server-metrics
+      app.kubernetes.io/component: server
+  namespaceSelector:
+    matchNames:
+      - argocd
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 60s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-repo-server
+  namespace: argocd
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-repo-server-metrics
+      app.kubernetes.io/component: repo-server
+  namespaceSelector:
+    matchNames:
+      - argocd
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 60s
