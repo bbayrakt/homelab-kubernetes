@@ -31,7 +31,7 @@ the argocd provider before ArgoCD exists.
 
 ```
 infra/
-  root.hcl            # shared remote_state (local, per-unit real dir)
+  root.hcl            # shared remote_state (S3 via SeaweedFS, pbkdf2-encrypted)
   env.hcl             # ALL unit inputs + shared values (secrets decrypt, kubeconfig)
   secrets.sops.yaml   # single SOPS-encrypted secrets file (all units)
   cluster/            # unit: cluster terraform root (main.tf, ... modules/)
