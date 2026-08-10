@@ -13,7 +13,7 @@ Stack: Talos Linux - Kubernetes - Cilium (kube-proxy-free, L2 LB, Gateway API, W
 ```
 infra/              Terragrunt/OpenTofu units: cluster -> addons -> argocd-config
   env.hcl           ALL unit inputs centralized (versions, nodes, secrets)
-  root.hcl          shared remote_state (local backend)
+  root.hcl          shared remote_state (S3 backend on SeaweedFS, pbkdf2-encrypted)
   secrets.sops.yaml single SOPS-encrypted secrets file (never plaintext)
   cluster/          Talos cluster + Cilium; writes artifacts/kubeconfig + talosconfig
   addons/           Installs ArgoCD, cert-manager, external-dns
