@@ -43,6 +43,10 @@ locals {
 
     enable_qemu_guest_agent = true
 
+    # Talos machine log forwarding
+    talos_log_enabled = true
+    talos_log_port    = 5140
+
     # System extensions baked into every node image (qemu-guest-agent is
     # appended automatically). iscsi-tools + util-linux-tools are required by
     # Longhorn on every node.

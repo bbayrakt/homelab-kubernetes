@@ -24,6 +24,8 @@ module "talos_cluster" {
   kubernetes_version = var.kubernetes_version
   nodes              = local.talos_cluster_nodes
   artifacts_dir      = var.artifacts_dir
+  talos_log_enabled  = var.talos_log_enabled
+  talos_log_port     = var.talos_log_port
 
   cilium_inline_manifest = data.helm_template.cilium.manifest
 

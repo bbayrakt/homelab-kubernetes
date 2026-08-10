@@ -110,6 +110,18 @@ variable "enable_qemu_guest_agent" {
   default     = false
 }
 
+variable "talos_log_enabled" {
+  description = "Whether to configure machine.logging.destinations so Talos streams node service logs to the k8s-monitoring Alloy syslog receiver."
+  type        = bool
+  default     = false
+}
+
+variable "talos_log_port" {
+  description = "TCP port each Talos node pushes json_lines machine logs to (its own IP on this port)."
+  type        = number
+  default     = 5140
+}
+
 variable "talos_system_extensions" {
   description = "Official Image Factory system extensions baked into every node image (besides the QEMU guest agent, which follows enable_qemu_guest_agent)."
   type        = list(string)

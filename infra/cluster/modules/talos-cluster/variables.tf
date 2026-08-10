@@ -52,3 +52,15 @@ variable "gateway_api_inline_manifest" {
   type        = string
   sensitive   = true
 }
+
+variable "talos_log_enabled" {
+  description = "Whether to configure machine.logging.destinations so each node streams service logs (json_lines) to its own IP on talos_log_port."
+  type        = bool
+  default     = false
+}
+
+variable "talos_log_port" {
+  description = "TCP port each node pushes machine logs to."
+  type        = number
+  default     = 5140
+}
