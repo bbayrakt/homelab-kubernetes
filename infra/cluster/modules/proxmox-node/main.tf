@@ -61,6 +61,23 @@ resource "proxmox_virtual_environment_vm" "node" {
     }
   }
 
+  # Dedicated swap disk (per-node, on local-lvm thin pool). Talos provisions the
+  # entire disk as an encrypted swap volume (SwapVolumeConfig). Only added for
+  # nodes with swap_disk_size > 0.
+  dynamic "disk" {
+    for_each = each.value.swap_disk_size > 0 ? [each.value] : []
+
+    content {
+      datastore_id = disk.value.datastore_id
+      interface    = "scsi2"
+      size         = disk.value.swap_disk_size
+      file_format  = var.disk_format
+      cache        = "writethrough"
+      discard      = "on"
+      ssd          = var.disk_ssd
+    }
+  }
+
   efi_disk {
     datastore_id      = each.value.datastore_id
     type              = "4m"
