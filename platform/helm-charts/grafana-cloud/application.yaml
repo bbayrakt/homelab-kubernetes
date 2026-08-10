@@ -1,0 +1,137 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-cloud-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: k8s-monitoring
+    targetRevision: 4.3.2
+    helm:
+      releaseName: k8s-monitoring
+      values: |
+        cluster:
+          name: talos-cluster
+
+        destinations:
+          prometheus:
+            type: prometheus
+            url: https://prometheus-prod-65-prod-eu-west-2.grafana.net/api/prom/push
+            auth:
+              type: basic
+              usernameKey: prometheus-username
+              passwordKey: prometheus-token
+            secret:
+              create: false
+              name: alloy-secrets
+              namespace: grafana-cloud
+          loki:
+            type: loki
+            url: https://logs-prod-012.grafana.net/loki/api/v1/push
+            auth:
+              type: basic
+              usernameKey: loki-username
+              passwordKey: loki-token
+            secret:
+              create: false
+              name: alloy-secrets
+              namespace: grafana-cloud
+
+        clusterMetrics:
+          enabled: true
+          collector: alloy-metrics
+        hostMetrics:
+          enabled: true
+          collector: alloy-metrics
+        podLogsViaLoki:
+          enabled: true
+          collector: alloy-logs
+        clusterEvents:
+          enabled: true
+          collector: alloy-logs
+
+        integrations:
+          collector: alloy-metrics
+          cert-manager:
+            instances:
+              - name: cert-manager
+                labelSelectors:
+                  app.kubernetes.io/instance: cert-manager
+          alloy:
+            instances:
+              - name: alloy
+                labelSelectors:
+                  app.kubernetes.io/name: alloy
+
+        prometheusOperatorObjects:
+          enabled: true
+          collector: alloy-metrics
+
+        telemetryServices:
+          kube-state-metrics:
+            deploy: true
+          node-exporter:
+            deploy: true
+
+        collectors:
+          alloy-metrics:
+            presets: [clustered, statefulset]
+          alloy-logs:
+            presets: [daemonset, filesystem-log-reader]
+            alloy:
+              stabilityLevel: experimental
+              hostNetwork: true
+              dnsPolicy: ClusterFirstWithHostNet
+              extraConfig: |
+                loki.source.syslog "talos" {
+                  listener {
+                    address            = "0.0.0.0:5140"
+                    protocol           = "tcp"
+                    syslog_format      = "raw"
+                    max_message_length = 65536
+                  }
+                  forward_to = [loki.process.talos.receiver]
+                }
+
+                loki.process "talos" {
+                  stage.parse_json {
+                    expressions = {
+                      talos_time    = "talos-time",
+                      talos_level   = "talos-level",
+                      talos_service = "talos-service",
+                      talos_node    = "node",
+                      msg           = "msg",
+                    }
+                  }
+
+                  stage.template {
+                    source = "line"
+                    format = "{{ .msg }}"
+                  }
+
+                  stage.timestamp {
+                    source = "talos_time"
+                    format = "RFC3339Nano"
+                  }
+
+                  stage.labels {
+                    values = {
+                      talos_level   = "",
+                      talos_service = "",
+                      node          = "",
+                    }
+                  }
+
+                  forward_to = [loki.write.loki.receiver]
+                }
+  destination:
+    namespace: grafana-cloud
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

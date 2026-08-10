@@ -55,3 +55,31 @@ variable "github_admin_username" {
   type        = string
   default     = ""
 }
+
+variable "grafana_cloud_prometheus_username" {
+  description = "Grafana Cloud Prometheus instance ID (basic-auth username for remote-write)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "grafana_cloud_prometheus_token" {
+  description = "Grafana Cloud access-policy/API token with the metrics:write scope."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "grafana_cloud_loki_username" {
+  description = "Grafana Cloud Loki instance ID (basic-auth username for log push)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "grafana_cloud_loki_token" {
+  description = "Grafana Cloud access-policy/API token with the logs:write scope."
+  type        = string
+  default     = ""
+  sensitive   = true
+}

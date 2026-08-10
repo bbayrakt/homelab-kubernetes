@@ -109,3 +109,26 @@ resource "kubernetes_secret_v1" "external_dns_cloudflare" {
     "cloudflare-api-token" = var.cloudflare_api_token
   }
 }
+
+###
+# Grafana Cloud
+###
+
+resource "kubernetes_namespace_v1" "grafana_cloud" {
+  metadata { name = "grafana-cloud" }
+}
+
+# Credentials consumed by the k8s-monitoring chart (platform/helm-charts/
+# grafana-cloud). Key names match the destinations' usernameKey/passwordKey.
+resource "kubernetes_secret_v1" "grafana_cloud_credentials" {
+  metadata {
+    name      = "alloy-secrets"
+    namespace = kubernetes_namespace_v1.grafana_cloud.metadata[0].name
+  }
+  data = {
+    "prometheus-username" = var.grafana_cloud_prometheus_username
+    "prometheus-token"    = var.grafana_cloud_prometheus_token
+    "loki-username"       = var.grafana_cloud_loki_username
+    "loki-token"          = var.grafana_cloud_loki_token
+  }
+}
