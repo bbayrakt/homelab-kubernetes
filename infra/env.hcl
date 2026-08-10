@@ -57,18 +57,19 @@ locals {
     # Nodes
     nodes = {
       "192.168.0.67" = {
-        role         = "controlplane"
-        hostname     = "talos-cp-1"
-        proxmox_node = "proxmox01"
-        vm_id        = 210
-        ipv4_address = "192.168.0.67"
-        ipv4_prefix  = 24
-        ipv4_gateway = "192.168.0.1"
-        dns_servers  = ["192.168.0.1"]
-        mac_address  = "BC:24:11:00:00:D2"
-        cores        = 2
-        memory       = 4096
-        disk_size    = 40
+        role           = "controlplane"
+        hostname       = "talos-cp-1"
+        proxmox_node   = "proxmox01"
+        vm_id          = 210
+        ipv4_address   = "192.168.0.67"
+        ipv4_prefix    = 24
+        ipv4_gateway   = "192.168.0.1"
+        dns_servers    = ["192.168.0.1"]
+        mac_address    = "BC:24:11:00:00:D2"
+        cores          = 2
+        memory         = 4096
+        disk_size      = 40
+        swap_disk_size = 4
       }
       "192.168.0.68" = {
         role               = "worker"
@@ -84,6 +85,7 @@ locals {
         memory             = 14336
         disk_size          = 80
         longhorn_disk_size = 73
+        swap_disk_size     = 4
         node_labels        = { "node.longhorn.io/create-default-disk" = "true" }
       }
       "192.168.0.69" = {
@@ -100,6 +102,7 @@ locals {
         memory             = 14336
         disk_size          = 80
         longhorn_disk_size = 73
+        swap_disk_size     = 4
         node_labels        = { "node.longhorn.io/create-default-disk" = "true" }
       }
       "192.168.0.70" = {
@@ -116,6 +119,7 @@ locals {
         memory             = 14336
         disk_size          = 80
         longhorn_disk_size = 73
+        swap_disk_size     = 4
         node_labels        = { "node.longhorn.io/create-default-disk" = "true" }
       }
     }

@@ -19,6 +19,7 @@ locals {
       memory       = v.memory
       disk_size    = v.disk_size
       longhorn_disk_size = v.longhorn_disk_size
+      swap_disk_size     = v.swap_disk_size
       datastore_id = coalesce(v.datastore_id, var.proxmox_disk_datastore)
       cpu_type     = v.cpu_type
       mac_address  = v.mac_address

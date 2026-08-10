@@ -82,6 +82,59 @@ resource "talos_machine_configuration_apply" "this" {
         }
       })
     ],
+    # Encrypted swap device on the dedicated scsi2 disk (entire disk is used as
+    # swap — no minSize/maxSize) + zswap compressed swap cache, on all nodes.
+    # https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/storage-and-disk-management/swap
+    [
+      yamlencode({
+        apiVersion = "v1alpha1"
+        kind       = "SwapVolumeConfig"
+        name       = "swap"
+        provisioning = {
+          diskSelector = {
+            match = "'/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi2' in disk.symlinks"
+          }
+          # minSize only: maxSize unset => Talos grows the partition to fill the
+          # entire disk (no leftover space). minSize acts as a floor.
+          minSize = "3GiB"
+        }
+        encryption = {
+          provider = "luks2"
+          keys = [
+            {
+              # nodeID: key derived from node UUID + partition label. TPM keys
+              # require a Secure Boot UKI (pcrpkey in /.extra), which this
+              # non-secureboot cluster doesn't have.
+              slot   = 0
+              nodeID = {}
+            }
+          ]
+        }
+      })
+    ],
+    [
+      yamlencode({
+        apiVersion     = "v1alpha1"
+        kind           = "ZswapConfig"
+        maxPoolPercent = 20
+        shrinkerEnabled = true
+      })
+    ],
+    # Let the kubelet use swap:
+    # https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/storage-and-disk-management/swap#kubernetes-and-swap
+    [
+      yamlencode({
+        machine = {
+          kubelet = {
+            extraConfig = {
+              memorySwap = {
+                swapBehavior = "LimitedSwap"
+              }
+            }
+          }
+        }
+      })
+    ],
     # Worker-only Longhorn storage disk: Talos carves the dedicated scsi1
     # disk into a volume mounted at /var/mnt/longhorn (the UserVolumeConfig
     # data path the Longhorn Helm chart uses as its default).
