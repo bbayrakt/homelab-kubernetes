@@ -14,6 +14,12 @@ the argocd provider can only connect once the ArgoCD server exists.
 - ArgoCD reads GitOps content only from the git repo (`gitops_repo_url` from
   `env.hcl`).
 
+The `platform` ApplicationSet generates one app per `platform/*` folder. Helm
+chart `Application`s live under `platform/helm-charts/<chart>/`; because
+`platform/*` matches one level, ArgoCD generates a single parent app for
+`platform/helm-charts/` that applies all chart `Application`s (app-of-apps).
+This avoids one outer app per chart.
+
 The argocd provider connects to the in-cluster server (ClusterIP) via
 port-forwarding, deriving the cluster connection from the kubeconfig the
 `cluster` unit writes (`../cluster/artifacts/kubeconfig` via `env.hcl`), and
