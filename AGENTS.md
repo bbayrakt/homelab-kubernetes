@@ -18,8 +18,10 @@ infra/              Terragrunt/OpenTofu units: cluster -> addons -> argocd-confi
   cluster/          Talos cluster + Cilium; writes artifacts/kubeconfig + talosconfig
   addons/           Installs ArgoCD, cert-manager, external-dns
   argocd-config/    ArgoCD ApplicationSets (platform, apps)
-platform/           ArgoCD-managed cluster-level resources (network, cert-manager,
-                    external-dns, issuer, metrics-server, kubelet-serving-cert-approver)
+platform/           ArgoCD-managed cluster-level resources (network, issuer,
+                    metrics-server, kubelet-serving-cert-approver)
+  helm-charts/      one parent ArgoCD app (app-of-apps) for the Helm chart
+                    Applications
 apps/               ArgoCD-managed applications (one subdir per app)
 .github/            pre-commit CI workflow + scripts
 .pre-commit-config.yaml  the single lint/format gate
@@ -77,7 +79,7 @@ Verify any change with `.github/scripts/test-renovate.py` before pushing (uses t
 
 - **Terragrunt**: put unit inputs (and derived values) in `infra/env.hcl`, one `locals.cluster` / `locals.addons` / `locals.argocd_config` map. A unit's `terragrunt.hcl` only wires `inputs = local.env.locals.<unit>` and carries no values. `apply --all` order is `cluster -> addons -> argocd-config`; `destroy --all` reverses it. Providers resolve the cluster connection from `cluster/artifacts/kubeconfig` via `env.hcl`, so no `KUBECONFIG` export is needed.
 - **Secrets**: one SOPS-encrypted file, `infra/secrets.sops.yaml` (recipients in `.sops.yaml`). Edit only via `sops`. The age key is NOT in the repo.
-- **ArgoCD**: `platform/` = cluster-scoped/admin resources; `apps/` = regular applications. ApplicationSets generate from `main` with `automated` sync (prune + selfHeal), so pushing to `main` deploys. Adding `apps/<name>/` (or a new `platform/<name>/`) is picked up automatically.
+- **ArgoCD**: `platform/` = cluster-scoped/admin resources; `apps/` = regular applications. ApplicationSets generate from `main` with `automated` sync (prune + selfHeal), so pushing to `main` deploys. Adding `apps/<name>/` (or a new `platform/<name>/`) is picked up automatically. Helm chart `Application`s go under `platform/helm-charts/<chart>/` so the `platform` ApplicationSet generates a single parent app that applies them (avoids one outer app per chart).
 - **Versions**: dependency pins live in `infra/env.hcl` (`talos_version`, `kubernetes_version`, `cilium_chart_version`, `gateway_api_crds_version`), `infra/*/versions.tf` (provider pins), `.github/workflows/pre-commit.yaml` (CLI tools), `.pre-commit-config.yaml`, and ArgoCD `Application` chart `targetRevision`s. Renovate drives bumps, so don't bump versions manually without a reason. When adding/removing a pinned dependency, update `renovate.json` per the [Renovate section](#renovate) and verify with `.github/scripts/test-renovate.py`.
 
 ## Rules & guardrails
