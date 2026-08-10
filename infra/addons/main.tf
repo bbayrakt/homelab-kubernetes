@@ -127,7 +127,12 @@ resource "kubernetes_secret_v1" "external_dns_cloudflare" {
 ###
 
 resource "kubernetes_namespace_v1" "grafana_cloud" {
-  metadata { name = "grafana-cloud" }
+  metadata {
+    name = "grafana-cloud"
+    labels = {
+      "pod.security.kubernetes.io/enforce" = "privileged"
+    }
+  }
 }
 
 # Credentials consumed by the k8s-monitoring chart (platform/helm-charts/
