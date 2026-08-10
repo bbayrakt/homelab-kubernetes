@@ -109,12 +109,12 @@ boots etcd/controlplane, and the kubeconfig is written. VMs are left with
 installs once).
 
 > **First apply on an existing misprovisioned cluster:** destroy the VMs first
-> (`terragrunt run destroy`). Fresh disks are required for a clean install.
+> (`terragrunt destroy`). Fresh disks are required for a clean install.
 
 ### Scaling up
 
 Add another entry (with a free IP and unique `vm_id`) to the `nodes` map in
-`terragrunt.hcl`, then `terragrunt run apply`. New workers join automatically.
+`terragrunt.hcl`, then `terragrunt apply`. New workers join automatically.
 
 ## Cilium CNI (instead of Flannel)
 
@@ -134,7 +134,7 @@ for production, as an **inline manifest**:
   (`cluster.inlineManifests[].cilium`). Talos applies it itself during
   bootstrap, so **no manual `helm install`/`kubectl apply` window** is needed.
 
-Upgrade Cilium: bump `cilium_chart_version` → `terragrunt run apply` (re-renders
+Upgrade Cilium: bump `cilium_chart_version` → `terragrunt apply` (re-renders
 the manifest and re-applies the controlplane configs) → `talosctl upgrade-k8s`
 
 
@@ -229,7 +229,7 @@ registry pulls and speeding up image distribution:
   each node automatically (default `apply_mode = auto`); the provider retries
   while the node comes back.
 - **App deployment**: Spegel runs as a privileged DaemonSet, delivered by ArgoCD
-  from `platform/spegel/` (OCI chart `ghcr.io/spegel-org/helm-charts/spegel`).
+  from `platform/helm-charts/spegel/` (OCI chart `ghcr.io/spegel-org/helm-charts/spegel`).
   It is pointed at Talos's non-default containerd config path
   (`spegel.containerdRegistryConfigPath: /etc/cri/conf.d/hosts`) so it can
   write the mirror configuration that containerd reads.
@@ -271,12 +271,12 @@ registry pulls and speeding up image distribution:
   supported `extraKernelArgs`.
 - **Config changes are managed by `talos_machine_configuration_apply`.** Edits
   to node fields flow into the config patches and are re-applied to the running
-  nodes on the next `terragrunt run apply`.
+  nodes on the next `terragrunt apply`.
 - **Bootstrap pauses at phase 18/19 ("node not ready").** Expected with
   `cni: none`; nodes can't become Ready until a CNI runs. Because Cilium is an
   inline manifest, Talos applies it itself during bootstrap; the
   `talos_machine_bootstrap` resource retries internally. If an apply still ends
-  not-ready, just re-run `terragrunt run apply` (idempotent).
+  not-ready, just re-run `terragrunt apply` (idempotent).
 - **`cilium connectivity test` vs PodSecurity.** Test pods violate the
   `baseline` policy (they need `NET_RAW` in capabilities). Workaround: label the
   test namespace `pod-security.kubernetes.io/enforce=privileged`.
