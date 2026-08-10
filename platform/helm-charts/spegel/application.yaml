@@ -14,6 +14,8 @@ spec:
       values: |
         spegel:
           containerdRegistryConfigPath: /etc/cri/conf.d/hosts
+        serviceMonitor:
+          enabled: true
   destination:
     namespace: spegel
     server: https://kubernetes.default.svc
