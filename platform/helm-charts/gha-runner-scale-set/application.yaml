@@ -15,7 +15,7 @@ spec:
         githubConfigUrl: "https://github.com/bbayrakt/homelab-kubernetes"
         githubConfigSecret: arc-runner-auth
         controllerServiceAccount:
-          name: arc-gha-rs-controller
+          name: gha-runner-scale-set-controller-app-gha-rs-controller
           namespace: arc-systems
         runnerScaleSetName: argocd-diff-runner
         template:
@@ -29,3 +29,8 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    # The chart's CRDs exceed the 256KB annotation limit of client-side apply,
+    # so the CRDs must be applied with server-side apply (same as
+    # prometheus-operator-crds-app).
+    syncOptions:
+      - ServerSideApply=true
