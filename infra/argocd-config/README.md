@@ -1,16 +1,22 @@
-# argocd-config: ArgoCD resources (ApplicationSets)
+# argocd-config: ArgoCD bootstrap (ApplicationSets)
 
-A separate Terragrunt unit that configures ArgoCD **after** it is installed
+A separate Terragrunt unit that configures ArgoCD after it is installed
 (`addons`). Runs `cluster → addons → argocd-config` via `terragrunt apply
 --all`. Keeping it separate from `addons` avoids the from-scratch chicken-and-egg:
 the argocd provider can only connect once the ArgoCD server exists.
 
 ## What it manages
 
-- Two `ApplicationSet`s (`platform`, `apps`) via the **ArgoCD Terraform provider**
-  (`argoproj-labs/argocd`, `argocd_application_set`):
-  - `platform` → Meant for cluster admin-level resources, eg. cluster-scoped resources
-  - `apps` → Meant for regular applications.
+- A single bootstrap `ApplicationSet` (`bootstrap`) via the **ArgoCD Terraform
+  provider** (`argoproj-labs/argocd`, `argocd_application_set`). Its git
+  directory generator matches `argocd/appsets/*` in the repo and generates one
+  Application per subdir (`appset-{{path.basename}}`) that applies the
+  ApplicationSet YAML committed there (app-of-appsets pattern).
+- The real `platform` (cluster admin-level resources) and `apps` (regular
+  applications) ApplicationSets are therefore plain GitOps manifests under
+  `argocd/appsets/`, reviewable and diffable (e.g. by the Argo CD diff preview
+  workflow) instead of being defined in Terraform. Adding or changing an
+  ApplicationSet is a normal repo PR that needs no Terraform change.
 - ArgoCD reads GitOps content only from the git repo (`gitops_repo_url` from
   `env.hcl`).
 

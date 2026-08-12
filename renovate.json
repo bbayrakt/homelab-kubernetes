@@ -5,7 +5,11 @@
   "ignorePaths": ["**/.terragrunt-cache/**", "**/artifacts/**"],
 
   "argocd": {
-    "managerFilePatterns": ["/^platform\\/.*\\.ya?ml$/", "/^apps\\/.*\\.ya?ml$/"]
+    "managerFilePatterns": [
+      "/^platform\\/.*\\.ya?ml$/",
+      "/^apps\\/.*\\.ya?ml$/",
+      "/^argocd\\/.*\\.ya?ml$/"
+    ]
   },
   "kubernetes": {
     "managerFilePatterns": ["/^platform\\/.*\\.ya?ml$/", "/^apps\\/.*\\.ya?ml$/"]
@@ -67,6 +71,15 @@
       "matchStrings": ["pyyaml==(?<currentValue>[^\\s]+)"],
       "depNameTemplate": "pyyaml",
       "datasourceTemplate": "pypi"
+    },
+    {
+      "customType": "regex",
+      "description": "argocd-diff-preview binary version pinned in the diff preview workflow",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/argocd-diff-preview\\.ya?ml$/"],
+      "matchStrings": ["argocd-diff-preview/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"],
+      "depNameTemplate": "dag-andersen/argocd-diff-preview",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
     },
     {
       "customType": "regex",
