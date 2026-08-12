@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-diff-preview-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-cd
+    targetRevision: 10.3.0
+    helm:
+      releaseName: argocd-diff-preview
+      values: |
+        fullnameOverride: argocd-diff-preview
+        server:
+          service:
+            type: ClusterIP
+          ingress:
+            enabled: false
+        configs:
+          params:
+            "server.insecure": true
+  destination:
+    namespace: argocd-diff-preview
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
