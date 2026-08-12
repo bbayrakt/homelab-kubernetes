@@ -16,3 +16,8 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    # The chart's CRDs exceed the 256KB annotation limit of client-side apply,
+    # so the CRDs must be applied with server-side apply (same as
+    # prometheus-operator-crds-app).
+    syncOptions:
+      - ServerSideApply=true
