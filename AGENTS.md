@@ -16,14 +16,17 @@ infra/              Terragrunt/OpenTofu units: cluster -> addons -> argocd-confi
   root.hcl          shared remote_state (S3 backend on SeaweedFS, pbkdf2-encrypted)
   secrets.sops.yaml single SOPS-encrypted secrets file (never plaintext)
   cluster/          Talos cluster + Cilium; writes artifacts/kubeconfig + talosconfig
-  addons/           Installs ArgoCD, cert-manager, external-dns
-  argocd-config/    ArgoCD ApplicationSets (platform, apps)
+  addons/           Installs ArgoCD, cert-manager, external-dns, ARC namespaces
+  argocd-config/    ArgoCD bootstrap ApplicationSet (app-of-appsets)
+argocd/appsets/     committed ApplicationSets (platform, apps), applied via the
+                    Terraform bootstrap ApplicationSet
 platform/           ArgoCD-managed cluster-level resources (network, issuer,
-                    metrics-server, kubelet-serving-cert-approver)
+                    metrics-server, kubelet-serving-cert-approver,
+                    argocd-diff-runner RBAC)
   helm-charts/      one parent ArgoCD app (app-of-apps) for the Helm chart
-                    Applications
+                    Applications (incl. dedicated Argo CD + ARC for diff preview)
 apps/               ArgoCD-managed applications (one subdir per app)
-.github/            pre-commit CI workflow + scripts
+.github/            CI workflows + scripts (pre-commit, Argo CD diff preview)
 .pre-commit-config.yaml  the single lint/format gate
 renovate.json       dependency automation
 ```
@@ -47,7 +50,7 @@ Every change must pass `.pre-commit-config.yaml`; CI runs it on push/PR (`.githu
 - `terragrunt_fmt` + `terraform_tflint` (config: `infra/cluster/.tflint.hcl`) for `infra/`
 - local `terragrunt-validate` hook (`.github/scripts/terragrunt-validate.sh`): `terragrunt validate --all` on `infra/`; skips when no SOPS age key is available (e.g. CI), so it enforces validation locally where secrets decrypt
 - `yamllint` (`.yamllint.yaml`; ignores `secrets.sops.yaml`, 160-char lines)
-- `kubeconform` on `platform/` and `apps/` YAML
+- `kubeconform` on `platform/`, `apps/` and `argocd/` YAML
 - local `argocd-apps-check` hook (`.github/scripts/check-argocd-apps.py`): for every `Application` manifest under `platform/`/`apps/`, pulls its helm/OCI chart at `targetRevision` and renders it with `helm template` using the manifest's release name, namespace, and values (skips when helm/PyYAML are missing)
 - `detect-secrets` (baseline: `.secrets.baseline`); never add plaintext secrets. The baseline carries **no result entries** — known false positives are filtered instead: `infra/secrets.sops.yaml` and `.sops.yaml` are excluded by file (encryption is enforced by the `sops-encrypted` hook), and lines containing `passwordKey:`/`secretKeyRef`/`argocdServerAdminPassword` (chart key names, not credentials) are excluded by line. Keep it that way: a baseline with drift-prone result entries gets auto-rewritten by the hook on every partial commit. If a new false-positive pattern appears, extend the `--exclude-lines`/`--exclude-files` regexes in the baseline's `filters_used` (regenerate via `detect-secrets scan --exclude-files '<regex>' --exclude-lines '<regex>'`) instead of adding result entries.
 - `renovate-config-validator` for `renovate.json`
@@ -60,14 +63,17 @@ Every change must pass `.pre-commit-config.yaml`; CI runs it on push/PR (`.githu
 
 - `infra/env.hcl` version pins → regex custom managers (`talos_version`, `kubernetes_version`, `cilium_chart_version`, `gateway_api_crds_version`). **Every version field in `env.hcl` MUST have a matching `customManagers` entry.**
 - Terraform `helm_release` (ArgoCD in `infra/addons/main.tf`) → `terraform` manager (helm datasource).
-- ArgoCD `Application` manifests under `platform/` and `apps/` (cert-manager, external-dns, spegel) → `argocd` manager (helm datasource; OCI charts like cert-manager and spegel resolve via the `docker` datasource on quay.io/ghcr.io).
+- ArgoCD `Application`/`ApplicationSet` manifests under `platform/`, `apps/` and `argocd/` (cert-manager, external-dns, spegel, the dedicated Argo CD + ARC charts for diff preview, the committed `platform`/`apps` ApplicationSets) → `argocd` manager (helm datasource; OCI charts like cert-manager and spegel resolve via the `docker` datasource on quay.io/ghcr.io).
 - Raw manifests (`metrics-server`, `kubelet-serving-cert-approver`) → `kubernetes` manager (image + API versions).
 - `.github/workflows/pre-commit.yaml` CLI pins → regex custom managers; `.pre-commit-config.yaml` → `pre-commit` manager.
+- `.github/workflows/argocd-diff-preview.yaml` tool binary pin → regex custom manager (`dag-andersen/argocd-diff-preview`, github-releases datasource).
+
+**Argo CD diff preview** (`.github/workflows/argocd-diff-preview.yaml`): on PRs touching `platform/`/`apps/`/`argocd/`, a self-hosted ARC runner (`argocd-diff-runner`) renders the base vs. target branch through a dedicated Argo CD instance (namespace `argocd-diff-preview`) and posts `output/diff.md` as a PR comment. The tool discovers the committed `Application` manifests and the `platform`/`apps` ApplicationSets (`argocd/appsets/`) natively, patching their git sources to the PR branch. Runner SA `arc-runner` reaches the diff Argo CD via the Role in `platform/argocd-diff-runner/rbac.yaml`. The runner PAT lives in the `arc-runner-auth` Secret (namespace `arc-runners`), fed from the `github_runner_token` SOPS secret via the addons unit.
 
 When adding or removing a component:
 
 - New version pin in `env.hcl` (or any new `*.hcl`/workflow file) → add the corresponding custom manager; on removal, delete the entry.
-- New manifests under `platform/` or `apps/` → auto-discovered by the `argocd`/`kubernetes` managers, no config change needed (just ship the manifest).
+- New manifests under `platform/`, `apps/` or `argocd/` → auto-discovered by the `argocd`/`kubernetes` managers, no config change needed (just ship the manifest).
 - Removing an Application/manifest → no config change needed; remove the manifest only.
 
 Verify any change with `.github/scripts/test-renovate.py` before pushing (uses the exact renovate version pinned in `.pre-commit-config.yaml`; requires `gh` auth or `GITHUB_TOKEN`).
@@ -81,7 +87,7 @@ Verify any change with `.github/scripts/test-renovate.py` before pushing (uses t
 - **Secrets**: one SOPS-encrypted file, `infra/secrets.sops.yaml` (recipients in `.sops.yaml`). Edit only via `sops`. The age key is NOT in the repo.
 - **Secrets in sandboxed sessions**: the age key is root-only and unreachable, so you cannot decrypt or edit `infra/secrets.sops.yaml`. When a new secret is discovered mid-session, do NOT edit the encrypted file — ask the user to add it from the host with
   `sops set infra/secrets.sops.yaml '["key"]' '"value"'` (or `~/.config/opencode/sandbox/add-secret.sh <worktree> <key> <value>`), then re-run `sudo tg-run` — the change is live via the shared mount.
-- **ArgoCD**: `platform/` = cluster-scoped/admin resources; `apps/` = regular applications. ApplicationSets generate from `main` with `automated` sync (prune + selfHeal), so pushing to `main` deploys. Adding `apps/<name>/` (or a new `platform/<name>/`) is picked up automatically. Helm chart `Application`s go under `platform/helm-charts/<chart>/` so the `platform` ApplicationSet generates a single parent app that applies them (avoids one outer app per chart).
+- **ArgoCD**: `platform/` = cluster-scoped/admin resources; `apps/` = regular applications. The `platform`/`apps` ApplicationSets are committed under `argocd/appsets/` and applied by the Terraform-managed bootstrap ApplicationSet (`infra/argocd-config/`): one intermediate Application per appset dir, name `appset-{{path.basename}}`. They generate from `main` with `automated` sync (prune + selfHeal), so pushing to `main` deploys. Adding `apps/<name>/` (or a new `platform/<name>/`) is picked up automatically. Adding a new ApplicationSet = add a dir under `argocd/appsets/` (no Terraform change). Helm chart `Application`s go under `platform/helm-charts/<chart>/` so the `platform` ApplicationSet generates a single parent app that applies them (avoids one outer app per chart).
 - **Versions**: dependency pins live in `infra/env.hcl` (`talos_version`, `kubernetes_version`, `cilium_chart_version`, `gateway_api_crds_version`), `infra/*/versions.tf` (provider pins), `.github/workflows/pre-commit.yaml` (CLI tools), `.pre-commit-config.yaml`, and ArgoCD `Application` chart `targetRevision`s. Renovate drives bumps, so don't bump versions manually without a reason. When adding/removing a pinned dependency, update `renovate.json` per the [Renovate section](#renovate) and verify with `.github/scripts/test-renovate.py`.
 
 ## Rules & guardrails
