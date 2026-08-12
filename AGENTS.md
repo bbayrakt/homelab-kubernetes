@@ -89,6 +89,7 @@ Verify any change with `.github/scripts/test-renovate.py` before pushing (uses t
   `sops set infra/secrets.sops.yaml '["key"]' '"value"'` (or `~/.config/opencode/sandbox/add-secret.sh <worktree> <key> <value>`), then re-run `sudo tg-run` — the change is live via the shared mount.
 - **ArgoCD**: `platform/` = cluster-scoped/admin resources; `apps/` = regular applications. The `platform`/`apps` ApplicationSets are committed under `argocd/appsets/` and applied by the Terraform-managed bootstrap ApplicationSet (`infra/argocd-config/`): one intermediate Application per appset dir, name `appset-{{path.basename}}`. They generate from `main` with `automated` sync (prune + selfHeal), so pushing to `main` deploys. Adding `apps/<name>/` (or a new `platform/<name>/`) is picked up automatically. Adding a new ApplicationSet = add a dir under `argocd/appsets/` (no Terraform change). Helm chart `Application`s go under `platform/helm-charts/<chart>/` so the `platform` ApplicationSet generates a single parent app that applies them (avoids one outer app per chart).
 - **Versions**: dependency pins live in `infra/env.hcl` (`talos_version`, `kubernetes_version`, `cilium_chart_version`, `gateway_api_crds_version`), `infra/*/versions.tf` (provider pins), `.github/workflows/pre-commit.yaml` (CLI tools), `.pre-commit-config.yaml`, and ArgoCD `Application` chart `targetRevision`s. Renovate drives bumps, so don't bump versions manually without a reason. When adding/removing a pinned dependency, update `renovate.json` per the [Renovate section](#renovate) and verify with `.github/scripts/test-renovate.py`.
+- **Documentation**: keep the root `README.md` up to date. It describes the stack and the bootstrap/day-2 workflows. When adding or removing a component, changing the bootstrap order, or changing how the cluster is exposed, reflect it there. Detailed ops docs stay in the `infra/*/README.md` files.
 
 ## Rules & guardrails
 
@@ -102,6 +103,7 @@ Verify any change with `.github/scripts/test-renovate.py` before pushing (uses t
 
 ## Further reading
 
+- `README.md` (repo root): stack overview, getting started, day-2 workflows
 - `infra/README.md`: Terragrunt workflow, SOPS/age, unit ordering
 - `infra/cluster/README.md`: Talos provisioning, Cilium inline manifest, upgrades, pitfalls
 - `infra/addons/README.md`: ArgoCD bootstrap and adding apps
