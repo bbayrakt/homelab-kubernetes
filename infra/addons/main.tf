@@ -149,3 +149,29 @@ resource "kubernetes_secret_v1" "grafana_cloud_credentials" {
     "loki-token"          = var.grafana_cloud_loki_token
   }
 }
+
+###
+# Action Runner Controller (ARC) namespaces and secrets
+###
+
+resource "kubernetes_namespace_v1" "arc_systems" {
+  metadata { name = "arc-systems" }
+}
+
+resource "kubernetes_namespace_v1" "arc_runners" {
+  metadata { name = "arc-runners" }
+}
+
+resource "kubernetes_namespace_v1" "argocd_diff_preview" {
+  metadata { name = "argocd-diff-preview" }
+}
+
+resource "kubernetes_secret_v1" "arc_runner_auth" {
+  metadata {
+    name      = "arc-runner-auth"
+    namespace = kubernetes_namespace_v1.arc_runners.metadata[0].name
+  }
+  data = {
+    "github_token" = var.github_runner_token
+  }
+}

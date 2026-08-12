@@ -142,6 +142,7 @@ locals {
     github_oidc_client_secret = local.secrets.github_oidc_client_secret
     github_oidc_org           = "infrabytes"
     github_admin_username     = "bbayrakt"
+    github_runner_token       = local.secrets.github_runner_token
 
     # Grafana Cloud (free tier) remote-write credentials. Usernames are the
     # stack instance IDs, tokens are access-policy/API tokens scoped to
