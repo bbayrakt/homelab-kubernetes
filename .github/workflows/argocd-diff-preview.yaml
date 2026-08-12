@@ -1,0 +1,58 @@
+name: Argo CD Diff Preview
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'platform/**'
+      - 'apps/**'
+      - 'argocd/**'
+      - 'infra/argocd-config/**'
+      - '.github/workflows/argocd-diff-preview.yaml'
+
+concurrency:
+  group: argocd-diff-preview-${{ github.event.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  diff-preview:
+    runs-on: argocd-diff-runner
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: target-branch
+          fetch-depth: 0
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          path: base-branch
+
+      - uses: Azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4.0.1
+
+      - name: Install argocd-diff-preview
+        run: |
+          curl -LJO https://github.com/dag-andersen/argocd-diff-preview/releases/download/v0.2.12/argocd-diff-preview-Linux-x86_64.tar.gz
+          tar -xvf argocd-diff-preview-Linux-x86_64.tar.gz
+          sudo mv argocd-diff-preview /usr/local/bin
+          argocd-diff-preview --version
+
+      - name: Generate Diff
+        run: |
+          argocd-diff-preview \
+            --repo ${{ github.repository }} \
+            --base-branch main \
+            --target-branch refs/pull/${{ github.event.number }}/merge \
+            --argocd-namespace=argocd-diff-preview \
+            --create-cluster=false
+
+      - name: Comment preview
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.number }} --repo ${{ github.repository }} --body-file output/diff.md --edit-last || \
+          gh pr comment ${{ github.event.number }} --repo ${{ github.repository }} --body-file output/diff.md
