@@ -13,13 +13,15 @@ GitOps-driven homelab Kubernetes cluster. A Talos Linux cluster (1 controlplane,
 | Kubernetes (1.36.3)          | Cluster on Proxmox VE (4 nodes), LAN 192.168.0.0/24                  |
 | Terragrunt + OpenTofu        | Infrastructure provisioning: `cluster -> addons -> argocd-config`     |
 | Cilium (1.20.0)              | CNI, kube-proxy-free, L2 LB (LB-IPAM 192.168.0.200-219), Gateway API (Gateway `homelab` at 192.168.0.200), WireGuard encryption, Hubble |
-| ArgoCD                       | GitOps delivery via ApplicationSets (`platform/`, `apps/`); UI at argocd.icaninto.space |
+| ArgoCD                       | GitOps delivery: `platform`/`apps` ApplicationSets committed in `argocd/appsets/`, applied by a Terraform-managed bootstrap ApplicationSet; UI at argocd.icaninto.space |
 | cert-manager                 | TLS via Let's Encrypt DNS-01 (Cloudflare), ClusterIssuer `letsencrypt-dns01` |
 | external-dns                 | Creates/updates Cloudflare DNS records from Gateways/HTTPRoutes      |
 | Longhorn                     | Block storage on the worker nodes (dedicated disk labels); UI at longhorn.icaninto.space |
 | Grafana Cloud (free tier)    | Metrics (Prometheus remote-write) + logs (Loki), via the `k8s-monitoring` Helm chart; also ingests Talos syslog (port 5140) |
 | spegel                       | Peer-to-peer container image distribution between nodes              |
 | prometheus-operator-crds     | CRDs for the monitoring stack                                        |
+| Actions Runner Controller    | Self-hosted GitHub Actions runners in-cluster (ARC), scale set `argocd-diff-runner` |
+| ArgoCD diff preview          | Dedicated Argo CD instance (namespace `argocd-diff-preview`) that renders base vs. target on PRs and posts a diff comment (`.github/workflows/argocd-diff-preview.yaml`) |
 | SOPS + age                   | One encrypted secrets file (`infra/secrets.sops.yaml`), age key never in git |
 | Renovate                     | Automated dependency bumps (versions in `infra/env.hcl`, chart `targetRevision`s, workflows) |
 
@@ -31,15 +33,20 @@ infra/              Terragrunt/OpenTofu units: cluster -> addons -> argocd-confi
   root.hcl          shared remote_state (S3 backend on SeaweedFS, pbkdf2-encrypted)
   secrets.sops.yaml single SOPS-encrypted secrets file (never plaintext)
   cluster/          Talos cluster + Cilium; writes artifacts/kubeconfig + talosconfig
-  addons/           Installs ArgoCD, cert-manager, external-dns
-  argocd-config/    ArgoCD ApplicationSets (platform, apps)
+  addons/           Installs ArgoCD, cert-manager, external-dns, ARC namespaces
+  argocd-config/    ArgoCD bootstrap ApplicationSet (app-of-appsets)
+argocd/appsets/     committed ApplicationSets (platform, apps), applied via the
+                    Terraform bootstrap ApplicationSet
 platform/           ArgoCD-managed cluster-level resources (network, issuer,
-                    metrics-server, kubelet-serving-cert-approver)
+                    metrics-server, kubelet-serving-cert-approver,
+                    argocd-diff-runner RBAC)
   helm-charts/      one parent ArgoCD app (app-of-apps) for the Helm chart
                     Applications (cert-manager, external-dns, grafana-cloud,
-                    longhorn, prometheus-operator-crds, spegel)
+                    longhorn, prometheus-operator-crds, spegel,
+                    argocd-diff-preview, gha-runner-scale-set,
+                    gha-runner-scale-set-controller)
 apps/               ArgoCD-managed applications (one subdir per app)
-.github/            pre-commit CI workflow + scripts
+.github/            CI workflows + scripts (pre-commit, Argo CD diff preview)
 .pre-commit-config.yaml  the single lint/format gate
 renovate.json       dependency automation
 ```
@@ -63,11 +70,13 @@ renovate.json       dependency automation
 
 ```sh
 cd infra
-terragrunt apply --all    # cluster -> addons (ArgoCD, cert-manager, external-dns) -> argocd-config (ApplicationSets)
+terragrunt apply --all    # cluster -> addons (ArgoCD, cert-manager, external-dns) -> argocd-config (bootstrap ApplicationSet)
 ```
 
-Once the ApplicationSets exist, ArgoCD syncs `platform/` and `apps/`
-automatically (automated sync with prune + selfHeal).
+The `argocd-config` unit creates a bootstrap ApplicationSet that applies the
+committed `platform`/`apps` ApplicationSets from `argocd/appsets/`. ArgoCD then
+syncs `platform/` and `apps/` automatically (automated sync with prune +
+selfHeal).
 
 ### Day-2 workflows
 
@@ -77,7 +86,9 @@ terragrunt plan --all     # infra changes: nodes, versions, Talos/Cilium config
 terragrunt apply --all    # apply them
 ```
 
-App changes: edit `platform/` or `apps/`, push to `main`. ArgoCD deploys.
+App changes: edit `platform/` or `apps/`, push to `main`. ArgoCD deploys. PRs
+touching `platform/`, `apps/` or `argocd/` get an ArgoCD diff comment from the
+diff-preview workflow (self-hosted ARC runner + dedicated Argo CD instance).
 
 Secrets: edit `infra/secrets.sops.yaml` with `sops` (re-encrypts on save). The
 age key is not in the repo; all units decrypt via `env.hcl`.
@@ -91,5 +102,5 @@ renovate-config-validator). CI runs the same on push/PR.
 - [`infra/README.md`](infra/README.md): Terragrunt workflow, SOPS/age, unit ordering
 - [`infra/cluster/README.md`](infra/cluster/README.md): Talos provisioning, Cilium inline manifest, networking, upgrades
 - [`infra/addons/README.md`](infra/addons/README.md): ArgoCD bootstrap, adding apps
-- [`infra/argocd-config/README.md`](infra/argocd-config/README.md): ApplicationSets
+- [`infra/argocd-config/README.md`](infra/argocd-config/README.md): bootstrap ApplicationSet
 - [`AGENTS.md`](AGENTS.md): guidance for AI coding agents working in this repo
