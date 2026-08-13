@@ -83,6 +83,15 @@
     },
     {
       "customType": "regex",
+      "description": "GitHub CLI version pinned in the diff preview workflow",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/argocd-diff-preview\\.ya?ml$/"],
+      "matchStrings": ["cli/cli/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"],
+      "depNameTemplate": "cli/cli",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
       "description": "Talos Linux version",
       "managerFilePatterns": ["/^infra\\/env\\.hcl$/"],
       "matchStrings": ["talos_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""],
