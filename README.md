@@ -19,6 +19,7 @@ GitOps-driven homelab Kubernetes cluster. A Talos Linux cluster (1 controlplane,
 | Longhorn                     | Block storage on the worker nodes (dedicated disk labels); UI at longhorn.icaninto.space |
 | Grafana Cloud (free tier)    | Metrics (Prometheus remote-write) + logs (Loki), via the `k8s-monitoring` Helm chart; also ingests Talos syslog (port 5140) |
 | spegel                       | Peer-to-peer container image distribution between nodes              |
+| vCluster                     | Virtual Kubernetes cluster in namespace `vcluster`; access via `vcluster connect` |
 | prometheus-operator-crds     | CRDs for the monitoring stack                                        |
 | Actions Runner Controller    | Self-hosted GitHub Actions runners in-cluster (ARC), scale set `argocd-diff-runner` |
 | ArgoCD diff preview          | Dedicated Argo CD instance (namespace `argocd-diff-preview`) that renders base vs. target on PRs and posts a diff comment (`.github/workflows/argocd-diff-preview.yaml`) |
@@ -42,7 +43,7 @@ platform/           ArgoCD-managed cluster-level resources (network, issuer,
                     argocd-diff-runner RBAC)
   helm-charts/      one parent ArgoCD app (app-of-apps) for the Helm chart
                     Applications (cert-manager, external-dns, grafana-cloud,
-                    longhorn, prometheus-operator-crds, spegel,
+                    longhorn, prometheus-operator-crds, spegel, vcluster,
                     argocd-diff-preview, gha-runner-scale-set,
                     gha-runner-scale-set-controller)
 apps/               ArgoCD-managed applications (one subdir per app)
