@@ -12,7 +12,7 @@ spec:
     helm:
       releaseName: gha-runner-scale-set
       values: |
-        githubConfigUrl: "https://github.com/bbayrakt/homelab-kubernetes"
+        githubConfigUrl: "https://github.com/bbayrakt"
         githubConfigSecret: arc-runner-auth
         controllerServiceAccount:
           name: gha-runner-scale-set-controller-app-gha-rs-controller
