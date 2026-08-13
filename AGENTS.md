@@ -66,7 +66,7 @@ Every change must pass `.pre-commit-config.yaml`; CI runs it on push/PR (`.githu
 - ArgoCD `Application`/`ApplicationSet` manifests under `platform/`, `apps/` and `argocd/` (cert-manager, external-dns, spegel, the dedicated Argo CD + ARC charts for diff preview, the committed `platform`/`apps` ApplicationSets) → `argocd` manager (helm datasource; OCI charts like cert-manager and spegel resolve via the `docker` datasource on quay.io/ghcr.io).
 - Raw manifests (`metrics-server`, `kubelet-serving-cert-approver`) → `kubernetes` manager (image + API versions).
 - `.github/workflows/pre-commit.yaml` CLI pins → regex custom managers; `.pre-commit-config.yaml` → `pre-commit` manager.
-- `.github/workflows/argocd-diff-preview.yaml` tool binary pin → regex custom manager (`dag-andersen/argocd-diff-preview`, github-releases datasource).
+- `.github/workflows/argocd-diff-preview.yaml` tool binary pins → regex custom managers (`dag-andersen/argocd-diff-preview`, `cli/cli` gh, github-releases datasource).
 
 **Argo CD diff preview** (`.github/workflows/argocd-diff-preview.yaml`): on PRs touching `platform/`/`apps/`/`argocd/`, a self-hosted ARC runner (`argocd-diff-runner`) renders the base vs. target branch through a dedicated Argo CD instance (namespace `argocd-diff-preview`) and posts `output/diff.md` as a PR comment. The tool discovers the committed `Application` manifests and the `platform`/`apps` ApplicationSets (`argocd/appsets/`) natively, patching their git sources to the PR branch. Runner SA `arc-runner` reaches the diff Argo CD via the Role in `platform/argocd-diff-runner/rbac.yaml`. The runner PAT lives in the `arc-runner-auth` Secret (namespace `arc-runners`), fed from the `github_runner_token` SOPS secret via the addons unit.
 
