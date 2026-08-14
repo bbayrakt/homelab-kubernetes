@@ -80,8 +80,7 @@ jobs:
           vcluster connect vcluster -n vcluster \
             --server https://vcluster.vcluster.svc:443 \
             --insecure \
-            --update-current false \
-            --kube-config /tmp/vcluster-kubeconfig.yaml
+            --print > /tmp/vcluster-kubeconfig.yaml
           echo "KUBECONFIG=/tmp/vcluster-kubeconfig.yaml" >> "$GITHUB_ENV"
 
       # Idempotent: converges the in-vcluster ArgoCD instance on every run.
@@ -142,6 +141,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          mkdir -p output
           if [ -f output/diff.md ]; then cat output/diff.md > output/comment.md; fi
           if [ -f output/preview-report.md ]; then cat output/preview-report.md >> output/comment.md; fi
           if [ ! -s output/comment.md ]; then
@@ -184,8 +184,7 @@ jobs:
           vcluster connect vcluster -n vcluster \
             --server https://vcluster.vcluster.svc:443 \
             --insecure \
-            --update-current false \
-            --kube-config /tmp/vcluster-kubeconfig.yaml
+            --print > /tmp/vcluster-kubeconfig.yaml
           echo "KUBECONFIG=/tmp/vcluster-kubeconfig.yaml" >> "$GITHUB_ENV"
 
       - name: Delete preview applications
