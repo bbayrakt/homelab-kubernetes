@@ -65,6 +65,17 @@ jobs:
           sudo mv gh_*_linux_amd64/bin/gh /usr/local/bin/gh
           gh --version
 
+      # argocd-diff-preview requires a local cluster tool to be present for
+      # its config validation even with --create-cluster=false; it is never
+      # used to create a cluster in this workflow.
+      - name: Install kind
+        run: |
+          curl -fSL -o kind-linux-amd64 \
+            https://github.com/kubernetes-sigs/kind/releases/download/v0.32.0/kind-linux-amd64
+          chmod +x kind-linux-amd64
+          sudo mv kind-linux-amd64 /usr/local/bin/kind
+          kind version
+
       # The runner pod has no kubeconfig file; use the committed one, which
       # points at the host cluster through the pod's service account mount.
       - name: Prepare host kubeconfig

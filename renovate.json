@@ -1,9 +1,15 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "labels": ["dependencies"],
-  "ignorePaths": ["**/.terragrunt-cache/**", "**/artifacts/**"],
-
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "ignorePaths": [
+    "**/.terragrunt-cache/**",
+    "**/artifacts/**"
+  ],
   "argocd": {
     "managerFilePatterns": [
       "/^platform\\/.*\\.ya?ml$/",
@@ -12,18 +18,24 @@
     ]
   },
   "kubernetes": {
-    "managerFilePatterns": ["/^platform\\/.*\\.ya?ml$/", "/^apps\\/.*\\.ya?ml$/"]
+    "managerFilePatterns": [
+      "/^platform\\/.*\\.ya?ml$/",
+      "/^apps\\/.*\\.ya?ml$/"
+    ]
   },
   "pre-commit": {
     "enabled": true
   },
-
   "customManagers": [
     {
       "customType": "regex",
       "description": "Terragrunt CLI version pinned in the pre-commit workflow",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
-      "matchStrings": ["tg_version:\\s*(?<currentValue>[^\\s]+)"],
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "tg_version:\\s*(?<currentValue>[^\\s]+)"
+      ],
       "depNameTemplate": "gruntwork-io/terragrunt",
       "datasourceTemplate": "github-tags",
       "versioningTemplate": "semver"
@@ -31,8 +43,12 @@
     {
       "customType": "regex",
       "description": "OpenTofu CLI version pinned in the pre-commit workflow",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
-      "matchStrings": ["tofu_version:\\s*(?<currentValue>[^\\s]+)"],
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "tofu_version:\\s*(?<currentValue>[^\\s]+)"
+      ],
       "depNameTemplate": "opentofu/opentofu",
       "datasourceTemplate": "github-tags",
       "versioningTemplate": "semver"
@@ -40,8 +56,12 @@
     {
       "customType": "regex",
       "description": "TFLint version pinned in the pre-commit workflow",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
-      "matchStrings": ["tflint_version:\\s*(?<currentValue>[^\\s]+)"],
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "tflint_version:\\s*(?<currentValue>[^\\s]+)"
+      ],
       "depNameTemplate": "terraform-linters/tflint",
       "datasourceTemplate": "github-tags",
       "versioningTemplate": "semver"
@@ -49,8 +69,12 @@
     {
       "customType": "regex",
       "description": "Kubeconform version pinned in the pre-commit workflow",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
-      "matchStrings": ["kubeconform-version:\\s*(?<currentValue>[^\\s]+)"],
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "kubeconform-version:\\s*(?<currentValue>[^\\s]+)"
+      ],
       "depNameTemplate": "yannh/kubeconform",
       "datasourceTemplate": "github-tags",
       "versioningTemplate": "semver"
@@ -58,8 +82,12 @@
     {
       "customType": "regex",
       "description": "Helm CLI version pinned in the CI workflows",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/(pre-commit|pr-preview)\\.ya?ml$/"],
-      "matchStrings": ["\\n\\s*version:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"],
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/(pre-commit|pr-preview)\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "\\n\\s*version:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
+      ],
       "depNameTemplate": "helm/helm",
       "datasourceTemplate": "github-tags",
       "versioningTemplate": "semver"
@@ -67,16 +95,24 @@
     {
       "customType": "regex",
       "description": "PyYAML version pinned in the pre-commit workflow",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
-      "matchStrings": ["pyyaml==(?<currentValue>[^\\s]+)"],
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "pyyaml==(?<currentValue>[^\\s]+)"
+      ],
       "depNameTemplate": "pyyaml",
       "datasourceTemplate": "pypi"
     },
     {
       "customType": "regex",
       "description": "argocd-diff-preview binary version pinned in the PR preview workflow",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"],
-      "matchStrings": ["argocd-diff-preview/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"],
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "argocd-diff-preview/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"
+      ],
       "depNameTemplate": "dag-andersen/argocd-diff-preview",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
@@ -84,17 +120,38 @@
     {
       "customType": "regex",
       "description": "GitHub CLI version pinned in the PR preview workflow",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"],
-      "matchStrings": ["cli/cli/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"],
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "cli/cli/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"
+      ],
       "depNameTemplate": "cli/cli",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
     },
     {
       "customType": "regex",
+      "description": "kind binary version pinned in the PR preview workflow",
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "kubernetes-sigs/kind/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"
+      ],
+      "depNameTemplate": "kubernetes-sigs/kind",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
       "description": "vcluster CLI version pinned in the PR preview workflow",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"],
-      "matchStrings": ["loft-sh/vcluster/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"],
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "loft-sh/vcluster/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"
+      ],
       "depNameTemplate": "loft-sh/vcluster",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
@@ -102,8 +159,12 @@
     {
       "customType": "regex",
       "description": "Argo CD Helm chart version installed in the PR preview vCluster",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"],
-      "matchStrings": ["--version\\s+(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "--version\\s+(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
       "depNameTemplate": "argo-cd",
       "datasourceTemplate": "helm",
       "registryUrlTemplate": "https://argoproj.github.io/argo-helm/",
@@ -112,8 +173,12 @@
     {
       "customType": "regex",
       "description": "Talos Linux version",
-      "managerFilePatterns": ["/^infra\\/env\\.hcl$/"],
-      "matchStrings": ["talos_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""],
+      "managerFilePatterns": [
+        "/^infra\\/env\\.hcl$/"
+      ],
+      "matchStrings": [
+        "talos_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""
+      ],
       "depNameTemplate": "siderolabs/talos",
       "datasourceTemplate": "github-tags",
       "versioningTemplate": "semver"
@@ -121,8 +186,12 @@
     {
       "customType": "regex",
       "description": "Kubernetes version (latest stable release)",
-      "managerFilePatterns": ["/^infra\\/env\\.hcl$/"],
-      "matchStrings": ["kubernetes_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""],
+      "managerFilePatterns": [
+        "/^infra\\/env\\.hcl$/"
+      ],
+      "matchStrings": [
+        "kubernetes_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""
+      ],
       "depNameTemplate": "kubernetes/kubernetes",
       "datasourceTemplate": "github-tags",
       "extractVersionTemplate": "^v(?<version>.*)$",
@@ -131,8 +200,12 @@
     {
       "customType": "regex",
       "description": "Cilium Helm chart version",
-      "managerFilePatterns": ["/^infra\\/env\\.hcl$/"],
-      "matchStrings": ["cilium_chart_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""],
+      "managerFilePatterns": [
+        "/^infra\\/env\\.hcl$/"
+      ],
+      "matchStrings": [
+        "cilium_chart_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""
+      ],
       "depNameTemplate": "cilium",
       "datasourceTemplate": "helm",
       "registryUrlTemplate": "https://helm.cilium.io/"
@@ -140,19 +213,52 @@
     {
       "customType": "regex",
       "description": "Gateway API CRD version",
-      "managerFilePatterns": ["/^infra\\/env\\.hcl$/"],
-      "matchStrings": ["gateway_api_crds_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""],
+      "managerFilePatterns": [
+        "/^infra\\/env\\.hcl$/"
+      ],
+      "matchStrings": [
+        "gateway_api_crds_version\\s*=\\s*\"(?<currentValue>[^\"\\s]+)\""
+      ],
       "depNameTemplate": "kubernetes-sigs/gateway-api",
       "datasourceTemplate": "github-tags",
       "versioningTemplate": "semver"
     }
   ],
-
   "packageRules": [
-    { "matchFileNames": [".github/**"], "groupName": "GitHub Actions", "groupSlug": "github-actions" },
-    { "matchFileNames": [".pre-commit-config.yaml"], "groupName": "pre-commit hooks", "groupSlug": "pre-commit" },
-    { "matchFileNames": ["infra/**"], "groupName": "Terraform", "groupSlug": "terraform" },
-    { "matchFileNames": ["platform/**"], "groupName": "platform", "groupSlug": "platform" },
-    { "matchFileNames": ["apps/**"], "groupName": "apps", "groupSlug": "apps" }
+    {
+      "matchFileNames": [
+        ".github/**"
+      ],
+      "groupName": "GitHub Actions",
+      "groupSlug": "github-actions"
+    },
+    {
+      "matchFileNames": [
+        ".pre-commit-config.yaml"
+      ],
+      "groupName": "pre-commit hooks",
+      "groupSlug": "pre-commit"
+    },
+    {
+      "matchFileNames": [
+        "infra/**"
+      ],
+      "groupName": "Terraform",
+      "groupSlug": "terraform"
+    },
+    {
+      "matchFileNames": [
+        "platform/**"
+      ],
+      "groupName": "platform",
+      "groupSlug": "platform"
+    },
+    {
+      "matchFileNames": [
+        "apps/**"
+      ],
+      "groupName": "apps",
+      "groupSlug": "apps"
+    }
   ]
 }
