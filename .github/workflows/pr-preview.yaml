@@ -133,8 +133,8 @@ jobs:
             --repo ${{ github.repository }} \
             --base-branch main \
             --target-branch refs/pull/${{ github.event.number }}/merge \
-            --argocd-namespace argocd-preview \
-            --create-cluster false
+            --argocd-namespace=argocd-preview \
+            --create-cluster=false
 
       - name: Deploy preview apps and check health
         run: |
@@ -143,7 +143,7 @@ jobs:
             --pr ${{ github.event.number }} \
             --base-dir base-branch \
             --target-dir target-branch \
-            --argocd-namespace argocd-preview \
+            --argocd-namespace=argocd-preview \
             --timeout 300 \
             --output output/preview-report.md
 
