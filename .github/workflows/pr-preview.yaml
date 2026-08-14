@@ -45,9 +45,10 @@ jobs:
 
       - name: Install vcluster CLI
         run: |
-          curl -fSL -o /usr/local/bin/vcluster \
+          curl -fSL -o vcluster-linux-amd64 \
             https://github.com/loft-sh/vcluster/releases/download/v0.36.1/vcluster-linux-amd64
-          chmod +x /usr/local/bin/vcluster
+          chmod +x vcluster-linux-amd64
+          sudo mv vcluster-linux-amd64 /usr/local/bin/vcluster
           vcluster version
 
       - name: Install argocd-diff-preview
@@ -165,9 +166,10 @@ jobs:
 
       - name: Install vcluster CLI
         run: |
-          curl -fSL -o /usr/local/bin/vcluster \
+          curl -fSL -o vcluster-linux-amd64 \
             https://github.com/loft-sh/vcluster/releases/download/v0.36.1/vcluster-linux-amd64
-          chmod +x /usr/local/bin/vcluster
+          chmod +x vcluster-linux-amd64
+          sudo mv vcluster-linux-amd64 /usr/local/bin/vcluster
           vcluster version
 
       - name: Prepare host kubeconfig
