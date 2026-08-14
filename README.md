@@ -22,7 +22,7 @@ GitOps-driven homelab Kubernetes cluster. A Talos Linux cluster (1 controlplane,
 | vCluster                     | Virtual Kubernetes cluster in namespace `vcluster`; access via `vcluster connect` |
 | prometheus-operator-crds     | CRDs for the monitoring stack                                        |
 | Actions Runner Controller    | Self-hosted GitHub Actions runners in-cluster (ARC), scale set `argocd-diff-runner` |
-| ArgoCD diff preview          | Dedicated Argo CD instance (namespace `argocd-diff-preview`) that renders base vs. target on PRs and posts a diff comment (`.github/workflows/argocd-diff-preview.yaml`) |
+| PR preview                    | Every PR touching `platform/`/`apps/` gets an Argo CD diff comment **and** a preview deployment into the vCluster (`.github/workflows/pr-preview.yaml`): the diff is rendered by a dedicated Argo CD instance inside the vCluster (`argocd-preview`), changed apps are deployed there with automated sync, and the comment reports Healthy/Degraded per app |
 | SOPS + age                   | One encrypted secrets file (`infra/secrets.sops.yaml`), age key never in git |
 | Renovate                     | Automated dependency bumps (versions in `infra/env.hcl`, chart `targetRevision`s, workflows) |
 
@@ -47,10 +47,38 @@ platform/           ArgoCD-managed cluster-level resources (network, issuer,
                     argocd-diff-preview, gha-runner-scale-set,
                     gha-runner-scale-set-controller)
 apps/               ArgoCD-managed applications (one subdir per app)
-.github/            CI workflows + scripts (pre-commit, Argo CD diff preview)
+.github/            CI workflows + scripts (pre-commit, PR preview with vCluster deploy)
 .pre-commit-config.yaml  the single lint/format gate
 renovate.json       dependency automation
 ```
+
+## PR preview (vCluster)
+
+Every PR touching `platform/**` or `apps/**` runs `.github/workflows/pr-preview.yaml`
+on the self-hosted `argocd-diff-runner` scale set:
+
+1. **Diff** — `argocd-diff-preview` renders base vs. target through the dedicated
+   Argo CD instance that runs *inside* the vCluster (namespace `argocd-preview`,
+   installed idempotently by the workflow itself via `helm upgrade --install`,
+   chart `argo-cd` from `argoproj.github.io/argo-helm`).
+2. **Deploy** — `.github/scripts/pr-preview.py` maps the changed files to app
+   directories, filters them through an allowlist of apps that can run in a
+   vCluster (no CRDs, no host infrastructure), and creates one ArgoCD
+   `Application` per changed testable app (`preview-pr-<N>-<app>`, source
+   `refs/pull/<N>/merge`, automated sync with prune + selfHeal, resources
+   finalizer). Everything else is skipped with the reason in the report.
+3. **Health** — the script waits (5 min per app) for `Synced` + `Healthy` and
+   collects operation errors and pod crash log excerpts on failure.
+4. **Report** — one PR comment with the diff plus a per-app table:
+   `Healthy` / `Degraded` / `Skipped`. The workflow fails the check when a
+   tested app is unhealthy; nothing ever touches the host cluster.
+
+Closing/merging the PR deletes the `preview-pr-<N>-*` Applications (the
+resources finalizer prunes the workloads). The vCluster and its Argo CD stay
+installed for the next PR.
+
+Testable today: `platform/metrics-server`, `platform/kubelet-serving-cert-approver`.
+The allowlist lives in `.github/scripts/pr-preview.py`.
 
 ## Getting started
 
@@ -88,8 +116,8 @@ terragrunt apply --all    # apply them
 ```
 
 App changes: edit `platform/` or `apps/`, push to `main`. ArgoCD deploys. PRs
-touching `platform/`, `apps/` or `argocd/` get an ArgoCD diff comment from the
-diff-preview workflow (self-hosted ARC runner + dedicated Argo CD instance).
+touching `platform/` or `apps/` get a diff comment plus a preview deployment
+into the vCluster (see [PR preview](#pr-preview-vcluster)).
 
 Secrets: edit `infra/secrets.sops.yaml` with `sops` (re-encrypts on save). The
 age key is not in the repo; all units decrypt via `env.hcl`.
