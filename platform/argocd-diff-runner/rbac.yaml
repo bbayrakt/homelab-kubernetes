@@ -30,7 +30,7 @@ roleRef:
 ---
 # Read access to the vcluster namespace so `vcluster connect` can discover
 # the vcluster workload and read the exported kubeconfig Secret
-# (vc-vcluster-kubeconfig) that the PR preview workflow uses to reach the
+# (vc-vcluster) that the PR preview workflow uses to reach the
 # virtual cluster.
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1

@@ -70,7 +70,7 @@ jobs:
       - name: Prepare host kubeconfig
         run: |
           cp target-branch/.github/host-kubeconfig.yaml /tmp/host-kubeconfig.yaml
-          kubectl --kubeconfig /tmp/host-kubeconfig.yaml get secret -n vcluster vc-vcluster-kubeconfig
+          kubectl --kubeconfig /tmp/host-kubeconfig.yaml get secret -n vcluster vc-vcluster
           echo "KUBECONFIG_HOST=/tmp/host-kubeconfig.yaml" >> "$GITHUB_ENV"
 
       - name: Connect to vcluster
