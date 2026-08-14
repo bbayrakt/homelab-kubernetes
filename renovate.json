@@ -57,8 +57,8 @@
     },
     {
       "customType": "regex",
-      "description": "Helm CLI version pinned in the pre-commit workflow",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"],
+      "description": "Helm CLI version pinned in the CI workflows",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/(pre-commit|pr-preview)\\.ya?ml$/"],
       "matchStrings": ["\\n\\s*version:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"],
       "depNameTemplate": "helm/helm",
       "datasourceTemplate": "github-tags",
@@ -74,8 +74,8 @@
     },
     {
       "customType": "regex",
-      "description": "argocd-diff-preview binary version pinned in the diff preview workflow",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/argocd-diff-preview\\.ya?ml$/"],
+      "description": "argocd-diff-preview binary version pinned in the PR preview workflow",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"],
       "matchStrings": ["argocd-diff-preview/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"],
       "depNameTemplate": "dag-andersen/argocd-diff-preview",
       "datasourceTemplate": "github-releases",
@@ -83,11 +83,30 @@
     },
     {
       "customType": "regex",
-      "description": "GitHub CLI version pinned in the diff preview workflow",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/argocd-diff-preview\\.ya?ml$/"],
+      "description": "GitHub CLI version pinned in the PR preview workflow",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"],
       "matchStrings": ["cli/cli/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"],
       "depNameTemplate": "cli/cli",
       "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "vcluster CLI version pinned in the PR preview workflow",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"],
+      "matchStrings": ["loft-sh/vcluster/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"],
+      "depNameTemplate": "loft-sh/vcluster",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Argo CD Helm chart version installed in the PR preview vCluster",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"],
+      "matchStrings": ["--version\\s+(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "argo-cd",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://argoproj.github.io/argo-helm/",
       "versioningTemplate": "semver"
     },
     {
