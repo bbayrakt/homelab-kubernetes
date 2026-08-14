@@ -1,0 +1,193 @@
+name: PR Preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - "platform/**"
+      - "apps/**"
+      - ".github/argocd-preview-values.yaml"
+      - ".github/host-kubeconfig.yaml"
+
+concurrency:
+  group: pr-preview-${{ github.event.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  preview:
+    if: github.event.action != 'closed'
+    runs-on: argocd-diff-runner
+    timeout-minutes: 40
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/pull/${{ github.event.number }}/merge
+          path: target-branch
+          fetch-depth: 0
+
+      - name: Checkout base branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          path: base-branch
+
+      - uses: Azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0
+
+      - uses: Azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.2.4
+
+      - name: Install vcluster CLI
+        run: |
+          curl -fSL -o /usr/local/bin/vcluster \
+            https://github.com/loft-sh/vcluster/releases/download/v0.36.1/vcluster-linux-amd64
+          chmod +x /usr/local/bin/vcluster
+          vcluster version
+
+      - name: Install argocd-diff-preview
+        run: |
+          curl -LJO https://github.com/dag-andersen/argocd-diff-preview/releases/download/v0.2.12/argocd-diff-preview-Linux-x86_64.tar.gz
+          tar -xvf argocd-diff-preview-Linux-x86_64.tar.gz
+          sudo mv argocd-diff-preview /usr/local/bin
+          argocd-diff-preview --version
+
+      - name: Install gh CLI
+        run: |
+          curl -LJO https://github.com/cli/cli/releases/download/v2.97.0/gh_2.97.0_linux_amd64.tar.gz
+          tar -xvf gh_2.97.0_linux_amd64.tar.gz
+          sudo mv gh_*_linux_amd64/bin/gh /usr/local/bin/gh
+          gh --version
+
+      # The runner pod has no kubeconfig file; use the committed one, which
+      # points at the host cluster through the pod's service account mount.
+      - name: Prepare host kubeconfig
+        run: |
+          cp target-branch/.github/host-kubeconfig.yaml /tmp/host-kubeconfig.yaml
+          kubectl --kubeconfig /tmp/host-kubeconfig.yaml get secret -n vcluster vc-vcluster-kubeconfig
+          echo "KUBECONFIG_HOST=/tmp/host-kubeconfig.yaml" >> "$GITHUB_ENV"
+
+      - name: Connect to vcluster
+        env:
+          KUBECONFIG: /tmp/host-kubeconfig.yaml
+        run: |
+          vcluster connect vcluster -n vcluster \
+            --server https://vcluster.vcluster.svc:443 \
+            --insecure \
+            --update-current false \
+            --kube-config /tmp/vcluster-kubeconfig.yaml
+          echo "KUBECONFIG=/tmp/vcluster-kubeconfig.yaml" >> "$GITHUB_ENV"
+
+      # Idempotent: converges the in-vcluster ArgoCD instance on every run.
+      - name: Ensure ArgoCD in vcluster
+        run: |
+          for attempt in 1 2 3; do
+            if helm upgrade --install argocd-preview argo-cd \
+                --repo https://argoproj.github.io/argo-helm \
+                --version 10.3.3 \
+                --namespace argocd-preview \
+                --create-namespace \
+                --values target-branch/.github/argocd-preview-values.yaml \
+                --wait --timeout 10m; then
+              break
+            fi
+            echo "helm upgrade attempt $attempt failed, retrying in 30s"
+            sleep 30
+          done
+          kubectl -n argocd-preview rollout status deployment -l app.kubernetes.io/component=server --timeout=5m
+
+      # ArgoCD's repo-server clones the private repo with this token; the
+      # re-apply on every run also refreshes the short-lived GITHUB_TOKEN.
+      - name: Ensure ArgoCD repository secret
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          kubectl -n argocd-preview create secret generic pr-preview-repo \
+            --from-literal=type=git \
+            --from-literal=url=https://github.com/${{ github.repository }} \
+            --from-literal=username=x-access-token \
+            --from-literal=password="${GITHUB_TOKEN}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n argocd-preview label secret pr-preview-repo \
+            argocd.argoproj.io/secret-type=repository --overwrite
+
+      - name: Generate diff
+        run: |
+          argocd-diff-preview \
+            --repo ${{ github.repository }} \
+            --base-branch main \
+            --target-branch refs/pull/${{ github.event.number }}/merge \
+            --argocd-namespace argocd-preview \
+            --create-cluster false
+
+      - name: Deploy preview apps and check health
+        run: |
+          python3 target-branch/.github/scripts/pr-preview.py \
+            --repo-url https://github.com/${{ github.repository }} \
+            --pr ${{ github.event.number }} \
+            --base-dir base-branch \
+            --target-dir target-branch \
+            --argocd-namespace argocd-preview \
+            --timeout 300 \
+            --output output/preview-report.md
+
+      - name: Comment preview
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f output/diff.md ]; then cat output/diff.md > output/comment.md; fi
+          if [ -f output/preview-report.md ]; then cat output/preview-report.md >> output/comment.md; fi
+          if [ ! -s output/comment.md ]; then
+            echo "No diff or preview report was generated." > output/comment.md
+          fi
+          gh pr comment ${{ github.event.number }} --repo ${{ github.repository }} --body-file output/comment.md --edit-last || \
+          gh pr comment ${{ github.event.number }} --repo ${{ github.repository }} --body-file output/comment.md
+
+  cleanup:
+    if: github.event.action == 'closed'
+    runs-on: argocd-diff-runner
+    timeout-minutes: 15
+    steps:
+      # The host kubeconfig lives in the repo; use the PR head ref so cleanup
+      # works even when the PR was closed without merging.
+      - name: Checkout PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/pull/${{ github.event.number }}/head
+
+      - uses: Azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0
+
+      - name: Install vcluster CLI
+        run: |
+          curl -fSL -o /usr/local/bin/vcluster \
+            https://github.com/loft-sh/vcluster/releases/download/v0.36.1/vcluster-linux-amd64
+          chmod +x /usr/local/bin/vcluster
+          vcluster version
+
+      - name: Prepare host kubeconfig
+        run: |
+          cp .github/host-kubeconfig.yaml /tmp/host-kubeconfig.yaml
+          echo "KUBECONFIG_HOST=/tmp/host-kubeconfig.yaml" >> "$GITHUB_ENV"
+
+      - name: Connect to vcluster
+        env:
+          KUBECONFIG: /tmp/host-kubeconfig.yaml
+        run: |
+          vcluster connect vcluster -n vcluster \
+            --server https://vcluster.vcluster.svc:443 \
+            --insecure \
+            --update-current false \
+            --kube-config /tmp/vcluster-kubeconfig.yaml
+          echo "KUBECONFIG=/tmp/vcluster-kubeconfig.yaml" >> "$GITHUB_ENV"
+
+      - name: Delete preview applications
+        run: |
+          kubectl -n argocd-preview delete applications \
+            -l preview.homelab/pr=${{ github.event.number }} \
+            --wait=false --ignore-not-found
