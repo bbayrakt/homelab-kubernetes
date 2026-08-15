@@ -5,16 +5,21 @@ Installs ArgoCD and the GitOps scaffolding after the Talos cluster exists.
 ## What it manages
 
 ### **ArgoCD**
+
 ClusterIP only; no LB, the Cilium Gateway fronts it  (`server.insecure` so ArgoCD
 serves plain HTTP behind the Gateway's TLS). Installs the ApplicationSet CRD +
 controller.
+
 ### **ArgoCD default admin password**
+
 The admin password is set deterministically on the chart
 (`configs.secret.argocdServerAdminPassword`, a bcrypt of the SOPS plaintext),
 so ArgoCD's `admin` password matches the SOPS value on fresh installs
 (ArgoCD regenerates `argocd-initial-admin-secret` with a random value
 otherwise).
+
 ### **cert-manager + external-dns secrets**
+
 Secrets (kept out of git as SOPS-encrypted values in the shared
 `../secrets.sops.yaml`).
 
@@ -45,6 +50,7 @@ password is pre-determined and matches the SOPS plaintext. The argocd provider
 in `../argocd-config` authenticates with that same plaintext.
 
 One-time prerequisites:
+
 1. Push the repo (with `platform/` + `apps/`) to the git remote ArgoCD clones.
    Public repo → no creds; private → set `github_pat`.
 2. Create a Cloudflare API token (Zone.Zone read + Zone.DNS edit) and set
@@ -55,12 +61,13 @@ Apply order (cluster first):
 
 ```sh
 cd infra
-terragrunt apply --all     # cluster -> addons (this unit) -> argocd-config
+terragrunt apply --all     # cluster -> viewer-kubeconfig, addons (this unit) -> argocd-config
 # or this unit alone:  cd infra/addons && terragrunt apply
 ```
 
 Once ArgoCD is up, `cd ../argocd-config && terragrunt apply` (or `--all`)
 creates the ApplicationSets, and ArgoCD syncs:
+
 - `platform` ApplicationSet syncs each `platform/` subdir (network, issuer,
   metrics-server, kubelet-serving-cert-approver) plus the single
   `platform/helm-charts/` parent app, which applies the Helm chart
