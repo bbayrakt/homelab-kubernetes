@@ -162,4 +162,15 @@ locals {
     gitops_repo_url       = local.gitops_repo_url
     argocd_admin_password = local.secrets.argocd_admin_password
   }
+
+  # ---------------------------------------------------------------------------
+  # viewer-kubeconfig unit inputs
+  # ---------------------------------------------------------------------------
+  viewer_kubeconfig = {
+    kubeconfig_path = local.kubeconfig_path
+    # Write the viewer kubeconfig next to the admin kubeconfig (gitignored).
+    artifacts_dir = abspath("${local.infra_dir}/cluster/artifacts")
+    cluster_name  = "talos-cluster"
+    user_name     = "viewer@talos-cluster"
+  }
 }

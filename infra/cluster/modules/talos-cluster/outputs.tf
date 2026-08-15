@@ -18,3 +18,14 @@ output "talos_machine_secrets" {
   value       = talos_machine_secrets.this.machine_secrets
   sensitive   = true
 }
+
+output "kubernetes_ca_certificate" {
+  description = "Kubernetes API server CA certificate (PEM), from the generated kubeconfig. Used by the viewer-kubeconfig unit to assemble the viewer kubeconfig."
+  value       = talos_cluster_kubeconfig.this.kubernetes_client_configuration.ca_certificate
+  sensitive   = true
+}
+
+output "kubernetes_host" {
+  description = "Kubernetes API server endpoint (https://host:6443), from the generated kubeconfig. Used by the viewer-kubeconfig unit to assemble the viewer kubeconfig."
+  value       = talos_cluster_kubeconfig.this.kubernetes_client_configuration.host
+}

@@ -24,3 +24,14 @@ output "first_controlplane_ip" {
   description = "IP of the first controlplane node (bootstrap target)."
   value       = module.talos_cluster.first_controlplane_ip
 }
+
+output "kubernetes_ca_certificate" {
+  description = "Kubernetes API server CA certificate (PEM)."
+  value       = module.talos_cluster.kubernetes_ca_certificate
+  sensitive   = true
+}
+
+output "kubernetes_host" {
+  description = "Kubernetes API server endpoint (https://host:6443)."
+  value       = module.talos_cluster.kubernetes_host
+}
