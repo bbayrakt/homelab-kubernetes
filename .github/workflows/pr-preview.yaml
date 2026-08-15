@@ -17,7 +17,7 @@ concurrency:
 jobs:
   preview:
     if: github.event.action != 'closed'
-    runs-on: argocd-diff-runner
+    runs-on: homelab-runner
     timeout-minutes: 40
     permissions:
       contents: read
@@ -133,7 +133,7 @@ jobs:
 
   cleanup:
     if: github.event.action == 'closed'
-    runs-on: argocd-diff-runner
+    runs-on: homelab-runner
     timeout-minutes: 15
     permissions:
       contents: read

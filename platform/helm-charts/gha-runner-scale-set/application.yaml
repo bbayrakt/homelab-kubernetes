@@ -17,7 +17,7 @@ spec:
         controllerServiceAccount:
           name: gha-runner-scale-set-controller-app-gha-rs-controller
           namespace: arc-systems
-        runnerScaleSetName: argocd-diff-runner
+        runnerScaleSetName: homelab-runner
         runnerGroup: homelab
         template:
           spec:
