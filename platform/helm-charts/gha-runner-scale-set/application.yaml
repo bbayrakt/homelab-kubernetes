@@ -23,6 +23,36 @@ spec:
           spec:
             serviceAccountName: arc-runner
             automountServiceAccountToken: true
+            volumes:
+              - name: tool-cache
+                persistentVolumeClaim:
+                  claimName: gha-runner-tool-cache
+            initContainers:
+              - name: tool-cache-dirs
+                image: alpine:3.21
+                securityContext:
+                  allowPrivilegeEscalation: false
+                command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    mkdir -p /opt/tool-cache/runner
+                    chown -R 1000:1000 /opt/tool-cache/runner
+                volumeMounts:
+                  - name: tool-cache
+                    mountPath: /opt/tool-cache
+            containers:
+              - name: runner
+                image: ghcr.io/actions/actions-runner:latest
+                command: ["/home/runner/run.sh"]
+                volumeMounts:
+                  - name: tool-cache
+                    mountPath: /opt/tool-cache
+                env:
+                  - name: RUNNER_TOOL_CACHE
+                    value: /opt/tool-cache/runner
+                  - name: PATH
+                    value: "/opt/tool-cache/manual/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   destination:
     namespace: arc-runners
     server: https://kubernetes.default.svc
@@ -30,8 +60,5 @@ spec:
     automated:
       prune: true
       selfHeal: true
-    # The chart's CRDs exceed the 256KB annotation limit of client-side apply,
-    # so the CRDs must be applied with server-side apply (same as
-    # prometheus-operator-crds-app).
     syncOptions:
       - ServerSideApply=true

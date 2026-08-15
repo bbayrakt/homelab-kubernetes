@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gha-runner-tool-cache
+  namespace: arc-runners
+  labels:
+    app.kubernetes.io/part-of: gha-runner-scale-set
+    app.kubernetes.io/component: tool-cache
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 10Gi

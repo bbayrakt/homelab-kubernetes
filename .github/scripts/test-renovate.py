@@ -16,15 +16,21 @@ What it does:
     2. installs the exact renovate version pinned in .pre-commit-config.yaml
        (never trusts the npx cache — stale cached versions are a known trap)
     3. runs renovate with platform=local in the temp copy (dryRun=lookup:
-       extract + lookup, no writes)
+       extract + lookup, no writes — the local platform forces this)
     4. prints the extraction stats and, for every detected dependency, the
        detected current version and the proposed update (if any)
+    5. fails when nothing was extracted (a config that silently matches
+       nothing is a broken config)
 
 Notes:
     - platform=local scans the current working directory, so the script
       chdir's into the temp copy — it is safe to invoke from anywhere
     - platform=local has no platform, so the GitHub token must be injected via
       RENOVATE_HOST_RULES; RENOVATE_TOKEN alone is not enough
+    - the local platform forces dryRun to 'lookup' (values other than
+      extract/lookup are unsupported and fall back to lookup), so Renovate
+      never writes files here; the dry run verifies extraction and lookup
+      only
     - renovate 44.x requires node ^24.11.0; the pre-commit node_env-lts node is
       tried first, then the system node
     - .opencode, .terragrunt-cache, artifacts etc. are excluded (local tooling
@@ -95,12 +101,24 @@ def github_token() -> str:
 
 def node_candidates() -> list:
     candidates = []
-    pre_nodes = sorted(
-        Path.home().glob(".cache/pre-commit/*/node_env-lts/bin/node"),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )
-    candidates.extend(str(p) for p in pre_nodes if os.access(p, os.X_OK))
+    try:
+        pre_nodes = sorted(
+            (
+                p
+                for p in Path.home().glob(".cache/pre-commit/*/node_env-lts/bin/node")
+                if p.is_file()
+            ),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+    except OSError:
+        pre_nodes = []
+    for p in pre_nodes:
+        try:
+            if os.access(p, os.X_OK):
+                candidates.append(str(p))
+        except OSError:
+            continue
     sys_node = shutil.which("node")
     if sys_node:
         candidates.append(sys_node)
@@ -161,16 +179,21 @@ def run_dry_run(
         RENOVATE_ONBOARDING="false",
         RENOVATE_CACHE_DIR=str(cache_dir),
         RENOVATE_LOG_LEVEL="debug",
+        # the local platform forces dryRun=lookup anyway; set it explicitly
+        # so the config dump and docs stay in sync
+        RENOVATE_DRY_RUN="lookup",
     )
     return run([node_bin, str(renovate_bin)], cwd=str(work_dir), env=env)
 
 
 def extraction_stats(log_text: str):
     pattern = re.compile(r'"([a-z0-9-]+)": \{"fileCount": (\d+), "depCount": (\d+)\}')
-    stats = {
-        m.group(1): (int(m.group(2)), int(m.group(3)))
-        for m in pattern.finditer(log_text)
-    }
+    stats = {}
+    for m in pattern.finditer(log_text):
+        try:
+            stats[m.group(1)] = (int(m.group(2)), int(m.group(3)))
+        except (ValueError, IndexError):
+            continue
     total = stats.get("total")
     return {k: v for k, v in stats.items() if k != "total"}, total
 
@@ -178,7 +201,10 @@ def extraction_stats(log_text: str):
 def parse_updates_section(log_text: str):
     """Parse the 'packageFiles with updates' config block from the log."""
     lines = log_text.splitlines()
-    idx = next((i for i, l in enumerate(lines) if "packageFiles with updates" in l), -1)
+    idx = next(
+        (i for i, line in enumerate(lines) if "packageFiles with updates" in line),
+        -1,
+    )
     if idx < 0:
         return None
     start = next((i for i in range(idx, len(lines)) if '"config": {' in lines[i]), -1)
@@ -195,7 +221,10 @@ def parse_updates_section(log_text: str):
         return None
     first = re.sub(r'^\s*"config":\s*', "", lines[start])
     block = "\n".join([first] + lines[start + 1 : end + 1])
-    return json.loads(block)
+    try:
+        return json.loads(block)
+    except json.JSONDecodeError:
+        return None
 
 
 def main() -> None:
@@ -273,34 +302,31 @@ def main() -> None:
         )
         config = parse_updates_section(log_text)
         if config is None:
-            print("  (update section not found in log)")
-        else:
-            total_deps = 0
-            for manager, files in config.items():
-                for f in files:
-                    for d in f.get("deps", []):
-                        total_deps += 1
-                        dep_name = d.get("depName") or d.get("depNameShort") or "<unknown>"
-                        if d.get("skipReason"):
-                            status = f"[skipped: {d['skipReason']}]"
+            keep = True
+            fail("update section not found in log — extraction failed")
+        total_deps = 0
+        for manager, files in config.items():
+            for f in files:
+                for d in f.get("deps", []):
+                    total_deps += 1
+                    dep_name = d.get("depName") or d.get("depNameShort") or "<unknown>"
+                    if d.get("skipReason"):
+                        status = f"[skipped: {d['skipReason']}]"
+                    else:
+                        updates = d.get("updates") or []
+                        if updates:
+                            status = "-> " + ", ".join(
+                                f"{u['newValue']} ({u['updateType']})" for u in updates
+                            )
                         else:
-                            updates = d.get("updates") or []
-                            if updates:
-                                status = "-> " + ", ".join(
-                                    f"{u['newValue']} ({u['updateType']})"
-                                    for u in updates
-                                )
-                            else:
-                                status = "up to date"
-                        print(
-                            f"  {manager} | {f['packageFile']} | {dep_name} | "
-                            f"{d.get('currentValue') or 'undefined'} | {d.get('datasource')} | {status}"
-                        )
-            if total_deps == 0:
-                print()
-                log(
-                    "WARNING: no dependencies extracted — check the manager fileMatch patterns"
-                )
+                            status = "up to date"
+                    print(
+                        f"  {manager} | {f['packageFile']} | {dep_name} | "
+                        f"{d.get('currentValue') or 'undefined'} | {d.get('datasource')} | {status}"
+                    )
+        if total_deps == 0:
+            keep = True
+            fail("no dependencies extracted — check the manager fileMatch patterns")
     finally:
         if keep:
             print(f"[renovate-test] workspace kept at: {tmp_dir} (log: {log_file})")
