@@ -29,9 +29,9 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Terragrunt CLI version pinned in the pre-commit workflow",
+      "description": "Terragrunt CLI version pinned in the pre-commit and tool-cache workflows",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/(pre-commit|warm-tool-cache)\\.ya?ml$/"
       ],
       "matchStrings": [
         "tg_version:\\s*(?<currentValue>[^\\s]+)"
@@ -42,9 +42,9 @@
     },
     {
       "customType": "regex",
-      "description": "OpenTofu CLI version pinned in the pre-commit workflow",
+      "description": "OpenTofu CLI version pinned in the pre-commit and tool-cache workflows",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/(pre-commit|warm-tool-cache)\\.ya?ml$/"
       ],
       "matchStrings": [
         "tofu_version:\\s*(?<currentValue>[^\\s]+)"
@@ -55,9 +55,9 @@
     },
     {
       "customType": "regex",
-      "description": "TFLint version pinned in the pre-commit workflow",
+      "description": "TFLint version pinned in the pre-commit and tool-cache workflows",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/(pre-commit|warm-tool-cache)\\.ya?ml$/"
       ],
       "matchStrings": [
         "tflint_version:\\s*(?<currentValue>[^\\s]+)"
@@ -99,7 +99,7 @@
         "/^\\.github\\/workflows\\/(pr-preview|warm-tool-cache)\\.ya?ml$/"
       ],
       "matchStrings": [
-        "version:\\s*(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+        "\\n\\s*version:\\s*(?<currentValue>\\d+\\.\\d+\\.\\d+)"
       ],
       "depNameTemplate": "kubernetes/kubernetes",
       "datasourceTemplate": "github-tags",

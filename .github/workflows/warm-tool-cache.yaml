@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/warm-tool-cache.yaml"
+      - ".github/workflows/pre-commit.yaml"
   schedule:
     - cron: "23 3 * * *"
   workflow_dispatch:
 
 concurrency:
+  # This workflow is the only seed writer, so its own runs must not overlap.
   group: warm-tool-cache
   cancel-in-progress: true
 
@@ -19,18 +21,15 @@ permissions:
 jobs:
   warm:
     runs-on: homelab-runner
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Prepare cache directories
         run: |
-          # The runner image tag is `latest` (mutable), so the UID is derived
-          # at runtime instead of hardcoded. Job user = runner user.
-          sudo mkdir -p /opt/tool-cache/runner
-          sudo chown -R "$(id -u):$(id -g)" /opt/tool-cache/runner
-          # One-time cleanup of the leftover `manual/` dir (the CLIs are now
-          # installed per-run by pr-preview.yaml); inert leftovers otherwise.
-          sudo rm -rf /opt/tool-cache/manual
+          # The image tag is mutable, so the UID is derived at runtime.
+          sudo mkdir -p /opt/tool-cache/local/runner /opt/tool-cache/local/mise /opt/tool-cache/local/pre-commit
+          sudo chown -R "$(id -u):$(id -g)" /opt/tool-cache/local
 
+      # Same actions and pins as pre-commit.yaml; installs land in the pod-local cache.
       - uses: Azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0
         with:
           version: 1.36.3 # keep in sync with kubernetes_version in infra/env.hcl
@@ -39,7 +38,34 @@ jobs:
         with:
           version: v4.2.4
 
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+
+      - uses: terraform-linters/setup-tflint@6e1e0642c0289bd619021bf6b34e3c08ed1e005a # v6.3.0
+        with:
+          tflint_version: v0.64.0
+
+      # tg_command omitted: the action acts as a pure tool installer.
+      - uses: gruntwork-io/terragrunt-action@8c1d96b76d445fd2e41475a3f0b63dcd1d9cc077 # v3.4.1
+        with:
+          tg_version: 1.1.3
+          tofu_version: 1.12.5
+
       - name: Verify cached tools
         run: |
           kubectl version --client
           helm version --short
+          python3 --version
+          tflint --version
+          terragrunt --version
+          tofu --version
+
+      - name: Publish seed tarballs
+        run: |
+          # Atomic publish so concurrent hydrators never see a torn archive.
+          for t in runner mise; do
+            if [ -d /opt/tool-cache/local/$t ]; then
+              sudo tar czf /opt/tool-cache/seed/$t.tar.gz.tmp -C /opt/tool-cache/local/$t . && sudo mv /opt/tool-cache/seed/$t.tar.gz.tmp /opt/tool-cache/seed/$t.tar.gz
+            fi
+          done
