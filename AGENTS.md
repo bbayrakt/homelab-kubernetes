@@ -24,8 +24,7 @@ argocd/appsets/     committed ApplicationSets (platform, apps), applied via the
 platform/           ArgoCD-managed cluster-level resources (network, issuer,
                     metrics-server, kubelet-serving-cert-approver,
                     argocd-diff-runner + cluster-viewer RBAC,
-                    vpa Service/ServiceMonitor + VPA objects,
-                    argocd-diff-runner RBAC)
+                    vpa Service/ServiceMonitor + VPA objects)
   helm-charts/      one parent ArgoCD app (app-of-apps) for the Helm chart
                     Applications (cert-manager, external-dns, Longhorn, ARC,
                     vcluster, grafana-cloud, vpa, ...)
