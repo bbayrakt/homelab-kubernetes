@@ -1,0 +1,20 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-rwx-cache
+  labels:
+    app.kubernetes.io/part-of: gha-runner-scale-set
+    app.kubernetes.io/component: tool-cache
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "2"
+  staleReplicaTimeout: "30"
+  fsType: "ext4"
+  dataLocality: "disabled"
+  disableRevisionCounter: "true"
+  dataEngine: "v1"
+  # Tuned for a disposable cache: async, noatime, 1 MiB rsize/wsize (replaces Longhorn's built-in options).
+  nfsOptions: "hard,nfsvers=4.1,async,noatime,rsize=1048576,wsize=1048576"

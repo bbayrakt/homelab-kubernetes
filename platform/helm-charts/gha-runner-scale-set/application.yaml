@@ -19,31 +19,44 @@ spec:
           namespace: arc-systems
         runnerScaleSetName: homelab-runner
         runnerGroup: homelab
+        # One runner always alive keeps pod-local caches warm; jobs stay fully concurrent.
+        minRunners: 1
         template:
           spec:
             serviceAccountName: arc-runner
             automountServiceAccountToken: true
             volumes:
-              - name: tool-cache
+              - name: tool-cache-seed
                 persistentVolumeClaim:
                   claimName: gha-runner-tool-cache
+              - name: tool-cache-local
+                emptyDir: {}
             containers:
               - name: runner
                 image: ghcr.io/actions/actions-runner:latest
-                # Self-heal volume ownership on every pod start: the runner
-                # image tag is `latest` (mutable), so the UID is derived at
-                # runtime instead of hardcoded. The image ships NOPASSWD sudo.
+                # Best-effort hydration from the seed tarballs (UID derived at runtime: image tag is mutable).
                 command:
                   - /bin/sh
                   - -c
                   - |
-                    sudo mkdir -p /opt/tool-cache/runner && sudo chown -R "$(id -u):$(id -g)" /opt/tool-cache/runner && exec /home/runner/run.sh
+                    for t in runner mise; do
+                      if [ -f /opt/tool-cache/seed/$t.tar.gz ]; then
+                        sudo mkdir -p /opt/tool-cache/local/$t && sudo tar xzf /opt/tool-cache/seed/$t.tar.gz -C /opt/tool-cache/local/$t 2>/dev/null && sudo chown -R "$(id -u):$(id -g)" /opt/tool-cache/local/$t
+                      fi
+                    done
+                    exec /home/runner/run.sh
                 volumeMounts:
-                  - name: tool-cache
-                    mountPath: /opt/tool-cache
+                  - name: tool-cache-seed
+                    mountPath: /opt/tool-cache/seed
+                  - name: tool-cache-local
+                    mountPath: /opt/tool-cache/local
                 env:
                   - name: RUNNER_TOOL_CACHE
-                    value: /opt/tool-cache/runner
+                    value: /opt/tool-cache/local/runner
+                  - name: MISE_DATA_DIR
+                    value: /opt/tool-cache/local/mise
+                  - name: PRE_COMMIT_HOME
+                    value: /opt/tool-cache/local/pre-commit
                   - name: PATH
                     value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   destination:
