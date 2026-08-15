@@ -29,7 +29,7 @@ spec:
                   claimName: gha-runner-tool-cache
             initContainers:
               - name: tool-cache-dirs
-                image: alpine:3.21
+                image: alpine:3.24
                 securityContext:
                   allowPrivilegeEscalation: false
                 command:
