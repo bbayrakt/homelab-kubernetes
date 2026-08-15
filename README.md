@@ -99,17 +99,13 @@ installed for the next PR.
 
 The runner pods mount a shared Longhorn RWX tool cache (`gha-runner-tool-cache`
 PVC in `arc-runners`, from `platform/gha-runner-scale-set/`) populated by the
-`.github/workflows/warm-tool-cache.yaml` workflow, so runner pod startup never
-downloads anything (a 3-line `tool-cache-dirs` init container only makes the
-volume usable by the runner user). The warming workflow runs nightly, on
-`workflow_dispatch`, and on pushes to its own file (so Renovate version bumps
-re-warm automatically):
+`.github/workflows/warm-tool-cache.yaml` workflow. On every pod start the runner
+command self-heals the volume ownership (`sudo chown` to the runner UID,
+derived at runtime via `id -u`), so the cache survives the mutable `latest`
+runner image. The warming workflow runs nightly, on `workflow_dispatch`, and
+on pushes to its own file (so Renovate version bumps re-warm automatically)
+and holds exactly one directory:
 
-- `manual/` — the CLIs without setup actions (vcluster, argocd-diff-preview,
-  gh, kind) are installed version-stamped and **root-owned** (read-only for
-  the runner) via sudo, exposed through stable `manual/bin` symlinks on the
-  runner `PATH`. Their version pins are the `*_VERSION` job env values in the
-  warming workflow (Renovate-tracked). A bump is a single value.
 - `runner/` — `RUNNER_TOOL_CACHE` for `Azure/setup-kubectl` and
   `Azure/setup-helm` (kubectl must match `kubernetes_version` in `env.hcl`;
   helm pinned in the workflows), so they are near-instant cache hits after
@@ -118,11 +114,15 @@ re-warm automatically):
   verification. Job code could plant a fake kubectl/helm there that later
   runs would execute. Accepted trade-off for a homelab with trusted PR
   authors: code running in a PR's own job already has the same-run exposure
-  (runner SA token, vcluster kubeconfig), and the `manual/` tools are not
-  affected.
+  (runner SA token, vcluster kubeconfig).
+
+The CLIs without setup actions (vcluster, argocd-diff-preview, gh, kind) are
+installed per-run by the PR preview workflow itself from its `*_VERSION` job
+env pins (Renovate-tracked), so a bump is a single value and no cache warm-up
+is needed.
 
 Any workflow that later moves to the self-hosted runner just uses the same
-setup actions / `manual/bin` PATH; the warming workflow keeps the cache warm.
+setup actions; the warming workflow keeps the kubectl/helm cache warm.
 
 Testable today: `platform/metrics-server`, `platform/kubelet-serving-cert-approver`.
 The allowlist lives in `.github/scripts/pr-preview.py`.

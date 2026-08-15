@@ -27,24 +27,17 @@ spec:
               - name: tool-cache
                 persistentVolumeClaim:
                   claimName: gha-runner-tool-cache
-            initContainers:
-              - name: tool-cache-dirs
-                image: alpine:3.21
-                securityContext:
-                  allowPrivilegeEscalation: false
+            containers:
+              - name: runner
+                image: ghcr.io/actions/actions-runner:latest
+                # Self-heal volume ownership on every pod start: the runner
+                # image tag is `latest` (mutable), so the UID is derived at
+                # runtime instead of hardcoded. The image ships NOPASSWD sudo.
                 command:
                   - /bin/sh
                   - -c
                   - |
-                    mkdir -p /opt/tool-cache/runner
-                    chown -R 1000:1000 /opt/tool-cache/runner
-                volumeMounts:
-                  - name: tool-cache
-                    mountPath: /opt/tool-cache
-            containers:
-              - name: runner
-                image: ghcr.io/actions/actions-runner:latest
-                command: ["/home/runner/run.sh"]
+                    sudo mkdir -p /opt/tool-cache/runner && sudo chown -R "$(id -u):$(id -g)" /opt/tool-cache/runner && exec /home/runner/run.sh
                 volumeMounts:
                   - name: tool-cache
                     mountPath: /opt/tool-cache
@@ -52,7 +45,7 @@ spec:
                   - name: RUNNER_TOOL_CACHE
                     value: /opt/tool-cache/runner
                   - name: PATH
-                    value: "/opt/tool-cache/manual/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                    value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   destination:
     namespace: arc-runners
     server: https://kubernetes.default.svc
