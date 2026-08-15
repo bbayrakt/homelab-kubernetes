@@ -61,10 +61,18 @@ jobs:
           terragrunt --version
           tofu --version
 
+      # Build the pre-commit hook environments once so fresh pods hydrate
+      # them instead of pip/npm-installing per pod (the dominant cold cost).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build pre-commit hook environments
+        run: |
+          python3 -m pip install pre-commit
+          pre-commit install-hooks
+
       - name: Publish seed tarballs
         run: |
           # Atomic publish so concurrent hydrators never see a torn archive.
-          for t in runner mise; do
+          for t in runner mise pre-commit; do
             if [ -d /opt/tool-cache/local/$t ]; then
               sudo tar czf /opt/tool-cache/seed/$t.tar.gz.tmp -C /opt/tool-cache/local/$t . && sudo mv /opt/tool-cache/seed/$t.tar.gz.tmp /opt/tool-cache/seed/$t.tar.gz
             fi

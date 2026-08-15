@@ -107,11 +107,12 @@ Longhorn RWX seed volume (`gha-runner-tool-cache` PVC in `arc-runners`, from
   match `kubernetes_version` in `env.hcl`), `mise/` (`MISE_DATA_DIR` for
   `gruntwork-io/terragrunt-action`'s terragrunt/tofu installs) and
   `pre-commit/` (`PRE_COMMIT_HOME` hook environments).
-- `seed/` (RWX volume) — tarballs of the warmed `runner` and `mise` trees,
-  published by the `.github/workflows/warm-tool-cache.yaml` workflow (the
-  only writer, atomic `tar` + `mv`). At every pod start the runner command
-  extracts them into the emptyDir (best-effort: a missing or torn archive
-  means a cold start with downloads).
+- `seed/` (RWX volume) — tarballs of the warmed `runner`, `mise` and
+  `pre-commit` (hook environments) trees, published by the
+  `.github/workflows/warm-tool-cache.yaml` workflow (the only writer,
+  atomic `tar` + `mv`). At every pod start the runner command extracts
+  them into the emptyDir (best-effort: a missing or torn archive means a
+  cold start with downloads).
 
 Caches are per-pod by design, so jobs run fully concurrent: setup actions
 only ever write pod-local paths and never race each other on the shared
