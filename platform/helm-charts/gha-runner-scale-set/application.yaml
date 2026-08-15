@@ -39,7 +39,7 @@ spec:
                   - /bin/sh
                   - -c
                   - |
-                    for t in runner mise; do
+                    for t in runner mise pre-commit; do
                       if [ -f /opt/tool-cache/seed/$t.tar.gz ]; then
                         sudo mkdir -p /opt/tool-cache/local/$t && sudo tar xzf /opt/tool-cache/seed/$t.tar.gz -C /opt/tool-cache/local/$t 2>/dev/null && sudo chown -R "$(id -u):$(id -g)" /opt/tool-cache/local/$t
                       fi
