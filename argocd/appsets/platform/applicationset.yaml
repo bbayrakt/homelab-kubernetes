@@ -37,9 +37,11 @@ spec:
       # the clusterrole-aggregation controller, so the live role always
       # differs from the manifest's empty rules (platform/cluster-viewer).
       # Ignoring the field keeps the app Synced; without it, the app would
-      # be permanently OutOfSync with selfHeal churn.
+      # be permanently OutOfSync with selfHeal churn. Scoped by name so
+      # other platform apps' ClusterRoles keep their rules fully managed.
       ignoreDifferences:
         - group: rbac.authorization.k8s.io
           kind: ClusterRole
+          name: cluster-viewer
           jqPathExpressions:
             - .rules
