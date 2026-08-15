@@ -1,3 +1,3 @@
 self-hosted-runner:
   labels:
-    - argocd-diff-runner
+    - homelab-runner

@@ -64,7 +64,7 @@ SKIP_PREFIXES = [
         "platform/issuer",
         "cert-manager ClusterIssuer - requires the host cert-manager",
     ),
-    ("platform/argocd-diff-runner", "host-cluster runner RBAC"),
+    ("platform/homelab-runner", "host-cluster runner RBAC"),
     (
         "platform/cluster-viewer",
         "cluster-scoped view RBAC - not testable in a vCluster",

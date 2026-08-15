@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   warm:
-    runs-on: argocd-diff-runner
+    runs-on: homelab-runner
     timeout-minutes: 20
     env:
       VCLUSTER_VERSION: v0.36.1
