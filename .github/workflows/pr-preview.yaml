@@ -22,6 +22,11 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    env:
+      VCLUSTER_VERSION: v0.36.1
+      ARGOCD_DIFF_PREVIEW_VERSION: v0.2.12
+      GH_CLI_VERSION: v2.97.0
+      KIND_VERSION: v0.32.0
     steps:
       - name: Checkout target branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -45,6 +50,47 @@ jobs:
       - uses: Azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: v4.2.4
+
+      # The CLIs below are installed per-run from the *_VERSION job env pins;
+      # they are not part of the persisted tool cache.
+      - name: Install vcluster CLI
+        run: |
+          set -eu
+          curl -fSL --retry 3 -o /tmp/vcluster-linux-amd64 \
+            "https://github.com/loft-sh/vcluster/releases/download/${VCLUSTER_VERSION}/vcluster-linux-amd64"
+          chmod +x /tmp/vcluster-linux-amd64
+          sudo mv /tmp/vcluster-linux-amd64 /usr/local/bin/vcluster
+          vcluster version
+
+      - name: Install argocd-diff-preview
+        run: |
+          set -eu
+          curl -fSL --retry 3 -o /tmp/argocd-diff-preview.tar.gz \
+            "https://github.com/dag-andersen/argocd-diff-preview/releases/download/${ARGOCD_DIFF_PREVIEW_VERSION}/argocd-diff-preview-Linux-x86_64.tar.gz"
+          tar -xzf /tmp/argocd-diff-preview.tar.gz -C /tmp
+          sudo mv /tmp/argocd-diff-preview /usr/local/bin/argocd-diff-preview
+          argocd-diff-preview --version
+
+      - name: Install gh CLI
+        run: |
+          set -eu
+          curl -fSL --retry 3 -o /tmp/gh.tar.gz \
+            "https://github.com/cli/cli/releases/download/${GH_CLI_VERSION}/gh_${GH_CLI_VERSION#v}_linux_amd64.tar.gz"
+          tar -xzf /tmp/gh.tar.gz -C /tmp
+          sudo mv "/tmp/gh_${GH_CLI_VERSION#v}_linux_amd64/bin/gh" /usr/local/bin/gh
+          gh --version
+
+      # argocd-diff-preview requires a local cluster tool to be present for
+      # its config validation even with --create-cluster=false; it is never
+      # used to create a cluster in this workflow.
+      - name: Install kind
+        run: |
+          set -eu
+          curl -fSL --retry 3 -o /tmp/kind-linux-amd64 \
+            "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
+          chmod +x /tmp/kind-linux-amd64
+          sudo mv /tmp/kind-linux-amd64 /usr/local/bin/kind
+          kind version
 
       # The runner pod has no kubeconfig file; use the committed one, which
       # points at the host cluster through the pod's service account mount.
@@ -137,6 +183,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+    env:
+      VCLUSTER_VERSION: v0.36.1 # keep in sync with the preview job
     steps:
       # The host kubeconfig lives in the repo; use the PR head ref so cleanup
       # works even when the PR was closed without merging.
@@ -149,6 +197,15 @@ jobs:
       - uses: Azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0
         with:
           version: 1.36.3 # keep in sync with kubernetes_version in infra/env.hcl
+
+      - name: Install vcluster CLI
+        run: |
+          set -eu
+          curl -fSL --retry 3 -o /tmp/vcluster-linux-amd64 \
+            "https://github.com/loft-sh/vcluster/releases/download/${VCLUSTER_VERSION}/vcluster-linux-amd64"
+          chmod +x /tmp/vcluster-linux-amd64
+          sudo mv /tmp/vcluster-linux-amd64 /usr/local/bin/vcluster
+          vcluster version
 
       - name: Prepare host kubeconfig
         run: |

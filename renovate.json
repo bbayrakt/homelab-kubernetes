@@ -120,9 +120,9 @@
     },
     {
       "customType": "regex",
-      "description": "argocd-diff-preview binary version pinned in the runner tool-cache workflow",
+      "description": "argocd-diff-preview binary version pinned in the PR preview workflow",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/warm-tool-cache\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
       ],
       "matchStrings": [
         "ARGOCD_DIFF_PREVIEW_VERSION:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
@@ -133,9 +133,9 @@
     },
     {
       "customType": "regex",
-      "description": "GitHub CLI version pinned in the runner tool-cache workflow",
+      "description": "GitHub CLI version pinned in the PR preview workflow",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/warm-tool-cache\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
       ],
       "matchStrings": [
         "GH_CLI_VERSION:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
@@ -146,9 +146,9 @@
     },
     {
       "customType": "regex",
-      "description": "kind binary version pinned in the runner tool-cache workflow",
+      "description": "kind binary version pinned in the PR preview workflow",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/warm-tool-cache\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
       ],
       "matchStrings": [
         "KIND_VERSION:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
@@ -159,9 +159,9 @@
     },
     {
       "customType": "regex",
-      "description": "vcluster CLI version pinned in the runner tool-cache workflow",
+      "description": "vcluster CLI version pinned in the PR preview workflow",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/warm-tool-cache\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
       ],
       "matchStrings": [
         "VCLUSTER_VERSION:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
