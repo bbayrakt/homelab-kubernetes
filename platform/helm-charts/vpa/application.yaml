@@ -1,0 +1,47 @@
+# VPA recommender, installed from the official kubernetes/autoscaler chart
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vpa-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kubernetes/autoscaler
+    targetRevision: vertical-pod-autoscaler-1.7.1
+    path: vertical-pod-autoscaler/charts/vertical-pod-autoscaler
+    helm:
+      releaseName: vertical-pod-autoscaler
+      values: |
+        updater:
+          enabled: false
+        admissionController:
+          enabled: false
+        recommender:
+          replicas: 1
+          image:
+            tag: "1.7.1"
+          resources:
+            limits:
+              cpu: 200m
+              memory: 1000Mi
+            requests:
+              cpu: 50m
+              memory: 500Mi
+          podDisruptionBudget:
+            enabled: false
+        containerSecurityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          readOnlyRootFilesystem: true
+          seccompProfile:
+            type: RuntimeDefault
+  destination:
+    namespace: kube-system
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
