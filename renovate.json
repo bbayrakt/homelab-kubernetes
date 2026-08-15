@@ -83,13 +83,27 @@
       "customType": "regex",
       "description": "Helm CLI version pinned in the CI workflows",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/(pre-commit|pr-preview)\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/(pre-commit|pr-preview|warm-tool-cache)\\.ya?ml$/"
       ],
       "matchStrings": [
         "\\n\\s*version:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
       ],
       "depNameTemplate": "helm/helm",
       "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "kubectl version pinned in the PR preview and tool-cache workflows (matches kubernetes_version in env.hcl)",
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/(pr-preview|warm-tool-cache)\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "version:\\s*(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "kubernetes/kubernetes",
+      "datasourceTemplate": "github-tags",
+      "extractVersionTemplate": "^v(?<version>.*)$",
       "versioningTemplate": "semver"
     },
     {
@@ -106,12 +120,12 @@
     },
     {
       "customType": "regex",
-      "description": "argocd-diff-preview binary version pinned in the PR preview workflow",
+      "description": "argocd-diff-preview binary version pinned in the runner tool-cache workflow",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/warm-tool-cache\\.ya?ml$/"
       ],
       "matchStrings": [
-        "argocd-diff-preview/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"
+        "ARGOCD_DIFF_PREVIEW_VERSION:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
       ],
       "depNameTemplate": "dag-andersen/argocd-diff-preview",
       "datasourceTemplate": "github-releases",
@@ -119,12 +133,12 @@
     },
     {
       "customType": "regex",
-      "description": "GitHub CLI version pinned in the PR preview workflow",
+      "description": "GitHub CLI version pinned in the runner tool-cache workflow",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/warm-tool-cache\\.ya?ml$/"
       ],
       "matchStrings": [
-        "cli/cli/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"
+        "GH_CLI_VERSION:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
       ],
       "depNameTemplate": "cli/cli",
       "datasourceTemplate": "github-releases",
@@ -132,12 +146,12 @@
     },
     {
       "customType": "regex",
-      "description": "kind binary version pinned in the PR preview workflow",
+      "description": "kind binary version pinned in the runner tool-cache workflow",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/warm-tool-cache\\.ya?ml$/"
       ],
       "matchStrings": [
-        "kubernetes-sigs/kind/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"
+        "KIND_VERSION:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
       ],
       "depNameTemplate": "kubernetes-sigs/kind",
       "datasourceTemplate": "github-releases",
@@ -145,12 +159,12 @@
     },
     {
       "customType": "regex",
-      "description": "vcluster CLI version pinned in the PR preview workflow",
+      "description": "vcluster CLI version pinned in the runner tool-cache workflow",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/pr-preview\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/warm-tool-cache\\.ya?ml$/"
       ],
       "matchStrings": [
-        "loft-sh/vcluster/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"
+        "VCLUSTER_VERSION:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
       ],
       "depNameTemplate": "loft-sh/vcluster",
       "datasourceTemplate": "github-releases",
