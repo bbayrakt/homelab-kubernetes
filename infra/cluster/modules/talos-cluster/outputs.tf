@@ -20,7 +20,7 @@ output "talos_machine_secrets" {
 }
 
 output "kubernetes_ca_certificate" {
-  description = "Kubernetes API server CA certificate (PEM), from the generated kubeconfig. Used by the viewer-kubeconfig unit to assemble the viewer kubeconfig."
+  description = "Kubernetes API server CA certificate (base64-encoded PEM, as the talos provider delivers it), from the generated kubeconfig. The cluster unit decodes it to PEM for the viewer-kubeconfig unit."
   value       = talos_cluster_kubeconfig.this.kubernetes_client_configuration.ca_certificate
   sensitive   = true
 }
