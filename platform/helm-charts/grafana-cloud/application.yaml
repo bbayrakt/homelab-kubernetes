@@ -42,6 +42,14 @@ spec:
         clusterMetrics:
           enabled: true
           collector: alloy-metrics
+          # Free tier budget: 10K active series (~14.5K scraped before tuning).
+          # kube_pod_status_reason/phase are near-empty for healthy pods and
+          # covered by kube_pod_info; dropping them saves ~1.1K series.
+          kube-state-metrics:
+            metricsTuning:
+              excludeMetrics:
+                - kube_pod_status_reason
+                - kube_pod_status_phase
         hostMetrics:
           enabled: true
           collector: alloy-metrics
@@ -59,6 +67,12 @@ spec:
               - name: cert-manager
                 labelSelectors:
                   app.kubernetes.io/instance: cert-manager
+                metrics:
+                  tuning:
+                    # ~500 series of Go/process runtime internals
+                    excludeMetrics:
+                      - "go_.*"
+                      - "process_.*"
           alloy:
             instances:
               - name: alloy
@@ -68,6 +82,16 @@ spec:
         prometheusOperatorObjects:
           enabled: true
           collector: alloy-metrics
+          # Series budget (10K free-tier cap): drop runtime/library internals
+          # measured at ~2.3K (grpc_server), ~1.2K (go), ~1.6K (libp2p) series.
+          # Add new families here as components grow.
+          serviceMonitors:
+            metricsTuning:
+              excludeMetrics:
+                - "grpc_server_.*"
+                - "go_.*"
+                - "process_.*"
+                - "libp2p_.*"
 
         telemetryServices:
           kube-state-metrics:
