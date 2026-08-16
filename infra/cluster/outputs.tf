@@ -27,7 +27,7 @@ output "first_controlplane_ip" {
 
 output "kubernetes_ca_certificate" {
   description = "Kubernetes API server CA certificate (PEM)."
-  value       = module.talos_cluster.kubernetes_ca_certificate
+  value       = base64decode(module.talos_cluster.kubernetes_ca_certificate)
   sensitive   = true
 }
 
