@@ -2,14 +2,16 @@
 
 Terragrunt orchestrates the separate Terraform/OpenTofu projects (units) in this
 directory. `apply --all` runs `cluster` first, then `viewer-kubeconfig` and
-`addons` (independent siblings), then `argocd-config`.
+`addons` (independent siblings), then `argocd-config` (`grafana-cloud-config`
+is order-independent and runs in parallel).
 
-| Unit                | Purpose                                                                  |
-|---------------------|--------------------------------------------------------------------------|
-| `cluster`           | Talos cluster + Cilium (kube-proxy-free, L2 LB, Gateway API CRDs)        |
-| `viewer-kubeconfig` | Mints the view-only `viewer@talos-cluster` client cert (CSR API) + kubeconfig |
-| `addons`            | Installs ArgoCD, Cert Manager and ExternalDNS to bootstrap ArgoCD        |
-| `argocd-config`     | Configures ArgoCD resources (ApplicationSets); runs after ArgoCD exists  |
+| Unit                   | Purpose                                                                  |
+|------------------------|--------------------------------------------------------------------------|
+| `cluster`              | Talos cluster + Cilium (kube-proxy-free, L2 LB, Gateway API CRDs)        |
+| `viewer-kubeconfig`    | Mints the view-only `viewer@talos-cluster` client cert (CSR API) + kubeconfig |
+| `addons`               | Installs ArgoCD, Cert Manager and ExternalDNS to bootstrap ArgoCD        |
+| `grafana-cloud-config` | Grafana Cloud as code (dashboards, alerting, settings) via the grafana/grafana provider; no cluster dependency |
+| `argocd-config`        | Configures ArgoCD resources (ApplicationSets); runs after ArgoCD exists  |
 
 Run everything with one command from this directory:
 
@@ -45,6 +47,8 @@ infra/
     terragrunt.hcl    # logic only: inputs = local.env.locals.addons
   argocd-config/      # unit: ArgoCD ApplicationSets (argocd provider)
     terragrunt.hcl    # logic only: inputs = local.env.locals.argocd_config
+  grafana-cloud-config/ # unit: Grafana Cloud as code (grafana/grafana provider)
+    terragrunt.hcl    # logic only: inputs = local.env.locals.grafana_cloud
 ```
 
 ## Secrets (SOPS + AGE)
@@ -86,6 +90,7 @@ cd infra/cluster        && terragrunt apply
 cd infra/viewer-kubeconfig && terragrunt apply
 cd infra/addons         && terragrunt apply
 cd infra/argocd-config  && terragrunt apply
+cd infra/grafana-cloud-config && terragrunt apply
 ```
 
 ## View-only cluster access (viewer-kubeconfig)
