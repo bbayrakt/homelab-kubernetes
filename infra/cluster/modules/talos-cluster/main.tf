@@ -133,9 +133,9 @@ resource "talos_machine_configuration_apply" "this" {
     ],
     [
       yamlencode({
-        apiVersion     = "v1alpha1"
-        kind           = "ZswapConfig"
-        maxPoolPercent = 20
+        apiVersion      = "v1alpha1"
+        kind            = "ZswapConfig"
+        maxPoolPercent  = 20
         shrinkerEnabled = true
       })
     ],
