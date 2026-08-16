@@ -12,12 +12,16 @@ Stack: Talos Linux - Kubernetes - Cilium (kube-proxy-free, L2 LB, Gateway API, W
 
 ```
 infra/              Terragrunt/OpenTofu units: cluster -> viewer-kubeconfig, addons -> argocd-config
+                    (grafana-cloud-config is order-independent, runs in parallel)
   env.hcl           ALL unit inputs centralized (versions, nodes, secrets)
   root.hcl          shared remote_state (S3 backend on SeaweedFS, pbkdf2-encrypted)
   secrets.sops.yaml single SOPS-encrypted secrets file (never plaintext)
   cluster/          Talos cluster + Cilium; writes artifacts/kubeconfig + talosconfig
   viewer-kubeconfig/ Mints the view-only client cert + kubeconfig (CSR API, no CA key extraction)
   addons/           Installs ArgoCD, cert-manager, external-dns, ARC namespaces
+  grafana-cloud-config/
+                    Grafana Cloud as code (grafana/grafana provider):
+                    dashboards, alerting, org preferences; no cluster dependency
   argocd-config/    ArgoCD bootstrap ApplicationSet (app-of-appsets)
 argocd/appsets/     committed ApplicationSets (platform, apps), applied via the
                     Terraform bootstrap ApplicationSet
@@ -65,7 +69,7 @@ Every change must pass `.pre-commit-config.yaml`; CI runs it on push/PR on the s
 `renovate.json` is the single source of truth for dependency scanning. Coverage today:
 
 - `infra/env.hcl` version pins → regex custom managers (`talos_version`, `kubernetes_version`, `cilium_chart_version`, `gateway_api_crds_version`). **Every version field in `env.hcl` MUST have a matching `customManagers` entry.**
-- Terraform `helm_release` (ArgoCD in `infra/addons/main.tf`) → `terraform` manager (helm datasource).
+- Terraform `helm_release` (ArgoCD in `infra/addons/main.tf`) → `terraform` manager (helm datasource). The `grafana/grafana` provider pin in `infra/grafana-cloud-config/versions.tf` is also auto-discovered by the `terraform` manager — no `customManagers` entry needed for provider pins in `.tf` files.
 - ArgoCD `Application`/`ApplicationSet` manifests under `platform/`, `apps/` and `argocd/` (cert-manager, external-dns, spegel, the ARC charts, the VPA chart app in `platform/helm-charts/vpa/`, the committed `platform`/`apps` ApplicationSets) → `argocd` manager (helm datasource; OCI charts like cert-manager and spegel resolve via the `docker` datasource on quay.io/ghcr.io; the VPA chart's git `targetRevision` resolves via `git-tags` on kubernetes/autoscaler).
 - Raw manifests (`metrics-server`, `kubelet-serving-cert-approver`) → `kubernetes` manager (image + API versions).
 - `.github/workflows/pre-commit.yaml` + `.github/workflows/warm-tool-cache.yaml` CLI pins (terragrunt `tg_version`, tofu `tofu_version`, tflint `tflint_version`; kubeconform + pyyaml stay pre-commit-only) → regex custom managers whose `managerFilePatterns` cover both files; `.pre-commit-config.yaml` → `pre-commit` manager. The `actions/setup-python` `python-version` pin needs NO custom manager: the built-in `github-actions` manager already tracks it in every workflow file — don't add one (it would duplicate the built-in extraction).
@@ -87,7 +91,7 @@ Verify any change with `.github/scripts/test-renovate.py` before pushing (uses t
 
 ## Conventions
 
-- **Terragrunt**: put unit inputs (and derived values) in `infra/env.hcl`, one `locals.cluster` / `locals.viewer_kubeconfig` / `locals.addons` / `locals.argocd_config` map. A unit's `terragrunt.hcl` only wires `inputs = local.env.locals.<unit>` and carries no values. `apply --all` runs `cluster` first, then `viewer-kubeconfig` and `addons` (independent siblings), then `argocd-config`; `destroy --all` reverses it. Providers resolve the cluster connection from `cluster/artifacts/kubeconfig` via `env.hcl`, so no `KUBECONFIG` export is needed.
+- **Terragrunt**: put unit inputs (and derived values) in `infra/env.hcl`, one `locals.cluster` / `locals.viewer_kubeconfig` / `locals.addons` / `locals.grafana_cloud` / `locals.argocd_config` map. A unit's `terragrunt.hcl` only wires `inputs = local.env.locals.<unit>` and carries no values. `apply --all` runs `cluster` first, then `viewer-kubeconfig` and `addons` (independent siblings), then `argocd-config`; `destroy --all` reverses it. Providers resolve the cluster connection from `cluster/artifacts/kubeconfig` via `env.hcl`, so no `KUBECONFIG` export is needed. The `grafana-cloud-config` unit is the exception: it talks to the Grafana Cloud API (grafana/grafana provider, stack service-account token from SOPS), has no `dependencies {}` block, and runs in parallel with the other units.
 - **Secrets**: one SOPS-encrypted file, `infra/secrets.sops.yaml` (recipients in `.sops.yaml`). Edit only via `sops`. The age key is NOT in the repo.
 - **Secrets in sandboxed sessions**: the age key is root-only and unreachable, so you cannot decrypt or edit `infra/secrets.sops.yaml`. When a new secret is discovered mid-session, do NOT edit the encrypted file — ask the user to add it from the host with
   `sops set infra/secrets.sops.yaml '["key"]' '"value"'` (or `~/.config/opencode/sandbox/add-secret.sh <worktree> <key> <value>`), then re-run `sudo tg-run` — the change is live via the shared mount.

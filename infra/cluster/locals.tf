@@ -11,20 +11,20 @@ locals {
   # Field subsets passed to each module.
   proxmox_nodes = {
     for k, v in var.nodes : k => {
-      proxmox_node = v.proxmox_node
-      hostname     = v.hostname
-      role         = v.role
-      vm_id        = v.vm_id
-      cores        = v.cores
-      memory       = v.memory
-      disk_size    = v.disk_size
+      proxmox_node       = v.proxmox_node
+      hostname           = v.hostname
+      role               = v.role
+      vm_id              = v.vm_id
+      cores              = v.cores
+      memory             = v.memory
+      disk_size          = v.disk_size
       longhorn_disk_size = v.longhorn_disk_size
       swap_disk_size     = v.swap_disk_size
-      datastore_id = coalesce(v.datastore_id, var.proxmox_disk_datastore)
-      cpu_type     = v.cpu_type
-      mac_address  = v.mac_address
-      iso_filename = "talos-${v.hostname}-${substr(talos_image_factory_schematic.node[k].id, 0, 12)}-${var.talos_version}.iso"
-      iso_url      = "${local.talos_factory_url}/image/${talos_image_factory_schematic.node[k].id}/${var.talos_version}/${local.talos_iso_name}.iso"
+      datastore_id       = coalesce(v.datastore_id, var.proxmox_disk_datastore)
+      cpu_type           = v.cpu_type
+      mac_address        = v.mac_address
+      iso_filename       = "talos-${v.hostname}-${substr(talos_image_factory_schematic.node[k].id, 0, 12)}-${var.talos_version}.iso"
+      iso_url            = "${local.talos_factory_url}/image/${talos_image_factory_schematic.node[k].id}/${var.talos_version}/${local.talos_iso_name}.iso"
     }
   }
 

@@ -1,20 +1,20 @@
 variable "nodes" {
   description = "Talos nodes to provision as Proxmox VMs. Key = node IP."
   type = map(object({
-    proxmox_node = string
-    hostname     = string
-    role         = string
-    vm_id        = number
-    cores        = number
-    memory       = number
-    disk_size    = number
+    proxmox_node       = string
+    hostname           = string
+    role               = string
+    vm_id              = number
+    cores              = number
+    memory             = number
+    disk_size          = number
     longhorn_disk_size = number
     swap_disk_size     = number
-    datastore_id = string
-    cpu_type     = string
-    mac_address  = string
-    iso_filename = string
-    iso_url      = string
+    datastore_id       = string
+    cpu_type           = string
+    mac_address        = string
+    iso_filename       = string
+    iso_url            = string
   }))
 }
 
