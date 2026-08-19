@@ -1,0 +1,87 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hubble-observer-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/onzack/helm-charts
+    chart: hubble-observer
+    targetRevision: 2.5.0
+    helm:
+      releaseName: hubble-observer
+      values: |
+        fullnameOverride: hubble-observer
+
+        # No grafana-operator CRD in this cluster; the dashboard ships via the
+        # grafana-cloud-config unit (infra/grafana-cloud-config, grafana.com ID 23862).
+        grafanaDashboard:
+          enabled: false
+
+        # Chart bug workaround: the liveness/readiness/startup probes query the relay
+        # by its bare name ("hubble-relay:80"), which only resolves inside the
+        # relay's own namespace. Alias it here via ExternalName so the probes work.
+        extraManifests:
+          - apiVersion: v1
+            kind: Service
+            metadata:
+              name: hubble-relay
+              namespace: hubble-observer
+            spec:
+              type: ExternalName
+              externalName: hubble-relay.kube-system.svc.cluster.local
+
+        # Main container: quay.io/cilium/hubble runs as root (no non-root USER in
+        # the image), so runAsNonRoot stays false; harden everything else that
+        # still works as root. The CLI needs no writable config for `observe`.
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: false
+          seccompProfile:
+            type: RuntimeDefault
+
+        # Only DROPPED flows are logged to Loki (free-tier log budget).
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 128Mi
+
+        cf2cnp:
+          enabled: true
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          httpRoute:
+            enabled: true
+            parentRefs:
+              - name: homelab
+                namespace: gateway
+                sectionName: cf2cnp-https
+            hostnames:
+              - cf2cnp.icaninto.space
+            paths:
+              - path: /
+                pathType: PathPrefix
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+  destination:
+    namespace: hubble-observer
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

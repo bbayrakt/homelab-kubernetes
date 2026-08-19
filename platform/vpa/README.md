@@ -51,7 +51,8 @@ cert-manager (all three Deployments), external-dns, Grafana Cloud stack
 (`k8s-monitoring-alloy-metrics` StatefulSet, `k8s-monitoring-alloy-logs`,
 `k8s-monitoring-kube-state-metrics`, `k8s-monitoring-node-exporter`; the
 `k8s-monitoring-` prefix comes from the chart's release name and the
-alloy-operator's subchart releases), kube-system (metrics-server,
+alloy-operator's subchart releases), hubble-observer (observer + cf2cnp
+Deployments, namespace `hubble-observer`), kube-system (metrics-server,
 `vertical-pod-autoscaler-recommender`, plus the Cilium/Hubble/CoreDNS
 workloads (cilium, cilium-envoy, cilium-operator, coredns, hubble-relay),
 which are deployed by `infra/cluster` via Terraform/Talos rather than
