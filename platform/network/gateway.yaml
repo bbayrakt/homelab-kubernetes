@@ -42,3 +42,15 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
+    - name: cf2cnp-https
+      hostname: cf2cnp.icaninto.space
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: cf2cnp-tls
+            kind: Secret
+      allowedRoutes:
+        namespaces:
+          from: All
