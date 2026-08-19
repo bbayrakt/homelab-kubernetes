@@ -17,6 +17,11 @@ data "grafana_data_source" "prom" {
   name = "grafanacloud-${local.stack_slug}-prom"
 }
 
+# Managed Logs datasource, referenced by the Hubble observer dashboard.
+data "grafana_data_source" "logs" {
+  name = "grafanacloud-${local.stack_slug}-logs"
+}
+
 # ---------------------------------------------------------------------------
 # Folders
 # ---------------------------------------------------------------------------
@@ -25,6 +30,29 @@ data "grafana_data_source" "prom" {
 resource "grafana_folder" "talos" {
   title = "Talos"
   uid   = "talos"
+}
+
+# ---------------------------------------------------------------------------
+# Dashboards
+# ---------------------------------------------------------------------------
+
+# Cilium Flows - Hubble Observer (grafana.com #23862), managed here instead of
+# the chart's grafanaDashboard (that needs the grafana-operator CRD, which this
+# cluster does not run). The JSON in dashboards/ is pre-resolved for the
+# release namespace and CF2CNP URL; the single ${DS_LOKI} placeholder is filled
+# with the managed Loki datasource uid at apply time.
+resource "grafana_folder" "cilium" {
+  title = "Cilium"
+  uid   = "cilium"
+}
+
+resource "grafana_dashboard" "cilium_hubble_flows" {
+  folder = grafana_folder.cilium.id
+  config_json = replace(
+    file("${path.module}/dashboards/cilium-hubble-flows.json"),
+    "$${DS_LOKI}",
+    data.grafana_data_source.logs.uid,
+  )
 }
 
 # ---------------------------------------------------------------------------
