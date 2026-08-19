@@ -18,6 +18,7 @@ GitOps-driven homelab Kubernetes cluster. A Talos Linux cluster (1 controlplane,
 | external-dns                 | Creates/updates Cloudflare DNS records from Gateways/HTTPRoutes      |
 | Longhorn                     | Block storage on the worker nodes (dedicated disk labels); UI at longhorn.icaninto.space |
 | Grafana Cloud (free tier)    | Metrics (Prometheus remote-write) + logs (Loki), via the `k8s-monitoring` Helm chart; also ingests Talos syslog (port 5140) |
+| Hubble Observer + CF2CNP     | Streams Cilium Hubble flows (DROPPED verdicts) to Loki; Grafana dashboard "Cilium Flows - Hubble Observer" (grafana.com #23862) in the Grafana Cloud stack; CF2CNP web UI generates CiliumNetworkPolicies from flows at cf2cnp.icaninto.space |
 | spegel                       | Peer-to-peer container image distribution between nodes              |
 | vCluster                     | Virtual Kubernetes cluster in namespace `vcluster`; access via `vcluster connect` |
 | prometheus-operator-crds     | CRDs for the monitoring stack                                        |
@@ -46,9 +47,9 @@ platform/           ArgoCD-managed cluster-level resources (network, issuer,
                     homelab-runner + cluster-viewer RBAC,
                     vpa Service/ServiceMonitor + VPA objects)
   helm-charts/      one parent ArgoCD app (app-of-apps) for the Helm chart
-                    Applications (cert-manager, external-dns, grafana-cloud,
-                    longhorn, prometheus-operator-crds, spegel, vcluster,
-                    argocd-diff-preview, gha-runner-scale-set,
+                    Applications (cert-manager, external-dns, hubble-observer,
+                    grafana-cloud, longhorn, prometheus-operator-crds, spegel,
+                    vcluster, argocd-diff-preview, gha-runner-scale-set,
                     gha-runner-scale-set-controller, vpa)
 apps/               ArgoCD-managed applications (one subdir per app)
 .github/            CI workflows + scripts (pre-commit, PR preview with vCluster deploy)
