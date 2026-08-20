@@ -83,7 +83,7 @@ spec:
           enabled: true
           collector: alloy-metrics
           # Series budget (10K free-tier cap): drop runtime/library internals
-          # measured at ~2.3K (grpc_server), ~1.2K (go), ~1.6K (libp2p) series.
+          # measured live (Aug 2026) at 16,459 total before this block.
           # Add new families here as components grow.
           serviceMonitors:
             metricsTuning:
@@ -92,6 +92,11 @@ spec:
                 - "go_.*"
                 - "process_.*"
                 - "libp2p_.*"
+                - "longhorn_rest_client_.*"
+                - "longhorn_workqueue_.*"
+                - "http_.*"
+                - "argocd_kubectl_(request_duration_seconds|rate_limiter_duration_seconds|response_size_bytes|request_size_bytes|requests_total).*"
+                - "controller_runtime_.*"
 
         telemetryServices:
           kube-state-metrics:
