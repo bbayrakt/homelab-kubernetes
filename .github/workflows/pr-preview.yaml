@@ -108,21 +108,14 @@ jobs:
           kubectl --kubeconfig /tmp/host-kubeconfig.yaml get secret -n vcluster vc-vcluster
           echo "KUBECONFIG_HOST=/tmp/host-kubeconfig.yaml" >> "$GITHUB_ENV"
 
-      # One isolated vCluster per PR; created on first run, reused afterwards,
-      # destroyed by the cleanup job on PR close. The vCluster carries its own
-      # preview ArgoCD + workloads, so the shared `vcluster` stays untouched.
+      # One isolated vCluster per PR 
       - name: Ensure per-PR vCluster
         env:
           KUBECONFIG: /tmp/host-kubeconfig.yaml
         run: |
-          if kubectl get pods -n preview-pr-${PR} \
-              -l app.kubernetes.io/instance=vcluster-pr-${PR} \
-              -o name 2>/dev/null | grep -q .; then
-            echo "vcluster vcluster-pr-${PR} already exists, reusing it"
-          else
-            vcluster create vcluster-pr-${PR} -n preview-pr-${PR} \
-              --values target-branch/.github/vcluster-preview-values.yaml
-          fi
+          vcluster create vcluster-pr-${PR} -n preview-pr-${PR} \
+            --connect=false \
+            --values target-branch/.github/vcluster-preview-values.yaml
 
       - name: Label preview namespace and apply LimitRange
         env:
