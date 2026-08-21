@@ -108,12 +108,18 @@ jobs:
           kubectl --kubeconfig /tmp/host-kubeconfig.yaml get secret -n vcluster vc-vcluster
           echo "KUBECONFIG_HOST=/tmp/host-kubeconfig.yaml" >> "$GITHUB_ENV"
 
-      # One isolated vCluster per PR
+      # One isolated vCluster per PR, converged on every run: vcluster
+      # create --upgrade = helm upgrade --install semantics, which also
+      # self-heals partial installs (a run that failed mid-install leaves
+      # a release half-applied; skipping on existence would keep the
+      # broken state forever). --connect=false: the CLI's connect opens a
+      # port-forward that blocks forever; we connect separately with --print.
       - name: Ensure per-PR vCluster
         env:
           KUBECONFIG: /tmp/host-kubeconfig.yaml
         run: |
           vcluster create vcluster-pr-${PR} -n preview-pr-${PR} \
+            --upgrade \
             --connect=false \
             --values target-branch/.github/vcluster-preview-values.yaml
 
