@@ -108,7 +108,7 @@ jobs:
           kubectl --kubeconfig /tmp/host-kubeconfig.yaml get secret -n vcluster vc-vcluster
           echo "KUBECONFIG_HOST=/tmp/host-kubeconfig.yaml" >> "$GITHUB_ENV"
 
-      # One isolated vCluster per PR 
+      # One isolated vCluster per PR
       - name: Ensure per-PR vCluster
         env:
           KUBECONFIG: /tmp/host-kubeconfig.yaml
