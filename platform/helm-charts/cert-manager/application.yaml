@@ -16,6 +16,8 @@ spec:
         config:
           gatewayAPI:
             enabled: true
+        global:
+          logLevel: 4
       parameters:
         - name: installCRDs
           value: "true"
