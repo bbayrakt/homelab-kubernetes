@@ -108,9 +108,9 @@
     },
     {
       "customType": "regex",
-      "description": "PyYAML version pinned in the pre-commit workflow",
+      "description": "PyYAML version pinned in the CI workflows",
       "managerFilePatterns": [
-        "/^\\.github\\/workflows\\/pre-commit\\.ya?ml$/"
+        "/^\\.github\\/workflows\\/(pre-commit|pr-preview)\\.ya?ml$/"
       ],
       "matchStrings": [
         "pyyaml==(?<currentValue>[^\\s]+)"
