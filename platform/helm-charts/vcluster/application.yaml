@@ -14,6 +14,18 @@ spec:
       values: |
         telemetry:
           enabled: false
+        # Serve the metrics API inside the vCluster by proxying the host
+        # metrics-server (read-only), so the preview VPA recommender and
+        # any HPA can work.
+        integrations:
+          metricsServer:
+            enabled: true
+        # Note: generic sync.fromHost.customResources (e.g. exposing the
+        # host Gateway API objects to the preview external-dns/cert-manager)
+        # is a vCluster.Pro feature on chart 0.36.1 - the OSS vCluster
+        # ignores it. Instead, pr-preview.py copies the required CRD
+        # definitions from the host into the vCluster before deploying
+        # apps that need them.
   destination:
     namespace: vcluster
     server: https://kubernetes.default.svc

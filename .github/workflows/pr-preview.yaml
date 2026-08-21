@@ -143,6 +143,26 @@ jobs:
           kubectl -n argocd-preview label secret pr-preview-repo \
             argocd.argoproj.io/secret-type=repository --overwrite
 
+      # The preview external-dns instance uses the same Cloudflare
+      # credentials as the host one, so copy the secret data-only into the
+      # vCluster (host read via KUBECONFIG_HOST, apply into the vCluster).
+      # Idempotent; the copy persists after PR close (same trust domain as
+      # host pods).
+      - name: Copy preview secrets
+        env:
+          KUBECONFIG_HOST: /tmp/host-kubeconfig.yaml
+        run: |
+          set -eu
+          kubectl --kubeconfig "${KUBECONFIG_HOST}" get secret \
+            cloudflare-api-token -n external-dns \
+            -o jsonpath='{.data.cloudflare-api-token}' | base64 -d \
+            > /tmp/cloudflare-api-token
+          kubectl create namespace external-dns \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic cloudflare-api-token -n external-dns \
+            --from-file=cloudflare-api-token=/tmp/cloudflare-api-token \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Generate diff
         run: |
           argocd-diff-preview \
@@ -160,7 +180,7 @@ jobs:
             --base-dir base-branch \
             --target-dir target-branch \
             --argocd-namespace=argocd-preview \
-            --timeout 300 \
+            --timeout 600 \
             --output output/preview-report.md
 
       - name: Comment preview
