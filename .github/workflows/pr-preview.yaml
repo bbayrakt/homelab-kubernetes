@@ -25,7 +25,7 @@ jobs:
     env:
       VCLUSTER_VERSION: v0.36.1
       ARGOCD_DIFF_PREVIEW_VERSION: v0.2.13
-      GH_CLI_VERSION: v2.97.0
+      GH_CLI_VERSION: v2.98.0
       KIND_VERSION: v0.32.0
     steps:
       - name: Checkout target branch
@@ -45,7 +45,7 @@ jobs:
 
       - uses: Azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0
         with:
-          version: 1.36.3 # keep in sync with kubernetes_version in infra/env.hcl
+          version: 1.36.4 # keep in sync with kubernetes_version in infra/env.hcl
 
       - uses: Azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
@@ -196,7 +196,7 @@ jobs:
 
       - uses: Azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0
         with:
-          version: 1.36.3 # keep in sync with kubernetes_version in infra/env.hcl
+          version: 1.36.4 # keep in sync with kubernetes_version in infra/env.hcl
 
       - name: Install vcluster CLI
         run: |
