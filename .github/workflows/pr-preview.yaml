@@ -7,8 +7,7 @@ on:
     paths:
       - "platform/**"
       - "apps/**"
-      - ".github/argocd-preview-values.yaml"
-      - ".github/host-kubeconfig.yaml"
+      - ".github/**"
 
 concurrency:
   group: pr-preview-${{ github.event.number }}
@@ -18,11 +17,12 @@ jobs:
   preview:
     if: github.event.action != 'closed'
     runs-on: homelab-runner
-    timeout-minutes: 40
+    timeout-minutes: 55
     permissions:
       contents: read
       pull-requests: write
     env:
+      PR: ${{ github.event.number }}
       VCLUSTER_VERSION: v0.36.1
       ARGOCD_DIFF_PREVIEW_VERSION: v0.2.13
       GH_CLI_VERSION: v2.97.0
@@ -100,12 +100,47 @@ jobs:
           kubectl --kubeconfig /tmp/host-kubeconfig.yaml get secret -n vcluster vc-vcluster
           echo "KUBECONFIG_HOST=/tmp/host-kubeconfig.yaml" >> "$GITHUB_ENV"
 
+      # One isolated vCluster per PR; created on first run, reused afterwards,
+      # destroyed by the cleanup job on PR close. The vCluster carries its own
+      # preview ArgoCD + workloads, so the shared `vcluster` stays untouched.
+      - name: Ensure per-PR vCluster
+        env:
+          KUBECONFIG: /tmp/host-kubeconfig.yaml
+        run: |
+          if kubectl get pods -n preview-pr-${PR} \
+              -l app.kubernetes.io/instance=vcluster-pr-${PR} \
+              -o name 2>/dev/null | grep -q .; then
+            echo "vcluster vcluster-pr-${PR} already exists, reusing it"
+          else
+            vcluster create vcluster-pr-${PR} -n preview-pr-${PR} \
+              --values target-branch/.github/vcluster-preview-values.yaml
+          fi
+
+      - name: Label preview namespace and apply LimitRange
+        env:
+          KUBECONFIG: /tmp/host-kubeconfig.yaml
+        run: |
+          kubectl label namespace preview-pr-${PR} \
+            preview.homelab/pr=${PR} --overwrite
+          kubectl apply -f target-branch/.github/preview-limitrange.yaml \
+            -n preview-pr-${PR}
+
+      # Hard preview quota: consume by the deploy step to skip deployment when
+      # too many environments are live (the report explains why).
+      - name: Count live preview environments
+        env:
+          KUBECONFIG: /tmp/host-kubeconfig.yaml
+        run: |
+          count=$(kubectl get namespaces -l preview.homelab/pr -o name 2>/dev/null | wc -l)
+          echo "live preview environments (incl. this PR): ${count}"
+          echo "PREVIEW_LIVE_COUNT=${count}" >> "$GITHUB_ENV"
+
       - name: Connect to vcluster
         env:
           KUBECONFIG: /tmp/host-kubeconfig.yaml
         run: |
-          vcluster connect vcluster -n vcluster \
-            --server https://vcluster.vcluster.svc:443 \
+          vcluster connect vcluster-pr-${PR} -n preview-pr-${PR} \
+            --server https://vcluster-pr-${PR}.preview-pr-${PR}.svc:443 \
             --insecure \
             --print > /tmp/vcluster-kubeconfig.yaml
           echo "KUBECONFIG=/tmp/vcluster-kubeconfig.yaml" >> "$GITHUB_ENV"
@@ -184,6 +219,7 @@ jobs:
     permissions:
       contents: read
     env:
+      PR: ${{ github.event.number }}
       VCLUSTER_VERSION: v0.36.1 # keep in sync with the preview job
     steps:
       # The host kubeconfig lives in the repo; use the PR head ref so cleanup
@@ -212,18 +248,12 @@ jobs:
           cp .github/host-kubeconfig.yaml /tmp/host-kubeconfig.yaml
           echo "KUBECONFIG_HOST=/tmp/host-kubeconfig.yaml" >> "$GITHUB_ENV"
 
-      - name: Connect to vcluster
+      # The preview ArgoCD, preview Applications and all previewed workloads
+      # live INSIDE the per-PR vCluster, so destroying the vCluster (and its
+      # namespace) removes everything. No ArgoCD-side cleanup is needed.
+      - name: Destroy per-PR vCluster
         env:
           KUBECONFIG: /tmp/host-kubeconfig.yaml
         run: |
-          vcluster connect vcluster -n vcluster \
-            --server https://vcluster.vcluster.svc:443 \
-            --insecure \
-            --print > /tmp/vcluster-kubeconfig.yaml
-          echo "KUBECONFIG=/tmp/vcluster-kubeconfig.yaml" >> "$GITHUB_ENV"
-
-      - name: Delete preview applications
-        run: |
-          kubectl -n argocd-preview delete applications \
-            -l preview.homelab/pr=${{ github.event.number }} \
-            --wait=false --ignore-not-found
+          vcluster delete vcluster-pr-${PR} -n preview-pr-${PR} \
+            --delete-namespace --ignore-not-found || true
