@@ -62,38 +62,75 @@ roleRef:
 # Per-PR preview vClusters (namespace preview-pr-<N>, vCluster
 # vcluster-pr-<N>): the runner creates and destroys one vCluster per PR and
 # exports CRDs from the cluster for the preview baseline. Cluster-scoped
-# because preview namespaces are created dynamically per PR; the resource
-# types are limited to what the vcluster chart/CLI need, plus read-only
-# CRD access. The vcluster CLI installs its own chart into the preview
-# namespace (statefulset, service, SA, roles, kubeconfig secret, ...), so
-# those namespaced types must be manageable there.
+# because preview namespaces are created dynamically per PR.
+#
+# The rule set deliberately covers EVERY (group, resource, verb) the
+# vcluster chart 0.36.x grants in its own `vc-<name>` Role (verified from
+# the chart's templates): Kubernetes' RBAC escalation check forbids
+# creating a Role whose permissions the caller does not already hold, so a
+# too-tight list breaks `vcluster create` with "forbidden: attempting to
+# grant RBAC permissions not currently held". Keep this list in sync when
+# bumping the vcluster chart. Plus the CLI's own needs (namespaces,
+# statefulset lifecycle) and the preview LimitRange/CRD-baseline steps.
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: arc-runner-preview-vclusters
 rules:
+  # vcluster CLI: creates/deletes the per-PR namespace on the host.
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  # Full CRUD set granted to the chart's own Role (plus services/
+  # serviceaccounts/secrets created by the helm install itself).
   - apiGroups: [""]
     resources:
-      - "pods"
-      - "services"
       - "configmaps"
+      - "endpoints"
+      - "persistentvolumeclaims"
+      - "pods"
+      - "pods/attach"
+      - "pods/exec"
+      - "pods/portforward"
       - "secrets"
       - "serviceaccounts"
-      - "persistentvolumeclaims"
-      - "events"
+      - "services"
     verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  # Chart Role: status/escalation subresources (patch/update only).
+  - apiGroups: [""]
+    resources: ["pods/status", "pods/ephemeralcontainers", "pods/resize"]
+    verbs: ["patch", "update"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "get", "list", "watch"]
+  # Preview namespace guardrails (LimitRange applied by the workflow).
+  - apiGroups: [""]
+    resources: ["limitranges"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  # Chart Role + CLI lifecycle (helm install/uninstall of the StatefulSet).
   - apiGroups: ["apps"]
-    resources: ["statefulsets", "deployments", "daemonsets", "replicasets"]
+    resources: ["statefulsets", "replicasets", "deployments", "daemonsets"]
     verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  # Chart Role: endpoint slice discovery.
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  # Chart Role: events in both API groups.
+  - apiGroups: ["events.k8s.io"]
+    resources: ["events"]
+    verbs: ["create", "get", "list", "watch"]
+  # Helm install of the chart's Role/RoleBinding/ServiceAccount.
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["roles", "rolebindings"]
     verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  # Leader election inside the preview namespace.
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  # Read-only: CRD baseline export for the preview vClusters.
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
     verbs: ["get", "list", "watch"]
