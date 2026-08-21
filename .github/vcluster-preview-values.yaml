@@ -1,0 +1,24 @@
+# Values for the per-PR preview vClusters created by
+# .github/workflows/pr-preview.yaml (vcluster create --values).
+
+controlPlane:
+  statefulSet:
+    scheduling:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - talos-cp-1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1536Mi
+telemetry:
+  enabled: false

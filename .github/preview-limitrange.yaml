@@ -1,0 +1,22 @@
+# Applied into each per-PR preview namespace (preview-pr-<N>) by
+# .github/workflows/pr-preview.yaml so a runaway preview workload cannot
+# starve the cluster.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: preview-pods
+spec:
+  limits:
+    - type: Container
+      min:
+        cpu: 10m
+        memory: 16Mi
+      max:
+        cpu: "2"
+        memory: 2Gi
+      default:
+        cpu: 100m
+        memory: 128Mi
+      defaultRequest:
+        cpu: 50m
+        memory: 64Mi
