@@ -154,10 +154,27 @@ def git_chart_args(tmp, app, source, dest_ns, helm_block):
     return release, rev, args
 
 
+def _register_value_tag() -> None:
+    """Make SafeLoader accept YAML 1.1 `=` (tag:yaml.org,2002:value).
+
+    PyYAML is a YAML 1.1 parser: a bare `=` plain scalar resolves to the
+    implicit value tag, which SafeLoader has no constructor for. Kubernetes
+    (sigs.k8s.io/yaml, YAML 1.2 semantics) treats `=` as the plain string
+    "=" - e.g. prometheus-operator CRDs render `enum: ['!=', =, =~, '!~']`.
+    Registering the constructor makes the parse match what Kubernetes
+    accepts. Idempotent.
+    """
+    yaml.SafeLoader.add_constructor(
+        "tag:yaml.org,2002:value",
+        lambda loader, node: loader.construct_scalar(node),
+    )
+
+
 def parse_yaml(text: str, what: str) -> list[dict]:
     """Parse a YAML stream into a list of mapping documents."""
     if yaml is None:
         raise RuntimeError("PyYAML is required")
+    _register_value_tag()
     try:
         return [d for d in yaml.safe_load_all(text) if isinstance(d, dict)]
     except yaml.YAMLError as err:
