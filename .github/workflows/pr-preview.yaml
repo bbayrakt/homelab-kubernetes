@@ -92,6 +92,10 @@ jobs:
           sudo mv /tmp/kind-linux-amd64 /usr/local/bin/kind
           kind version
 
+      # The preview scripts (render gate, dry-run, upgrade diff) parse YAML.
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml==6.0.3 --quiet
+
       # The runner pod has no kubeconfig file; use the committed one, which
       # points at the host cluster through the pod's service account mount.
       - name: Prepare host kubeconfig
@@ -145,6 +149,20 @@ jobs:
             --print > /tmp/vcluster-kubeconfig.yaml
           echo "KUBECONFIG=/tmp/vcluster-kubeconfig.yaml" >> "$GITHUB_ENV"
 
+      # CRD baseline: export what the cluster actually runs (all charts +
+      # cluster-unit CRDs like Cilium/Gateway API) and apply it into the PR
+      # vCluster, so dry-runs and preview syncs validate against the real
+      # CRD set. Auto-maintained: a merged chart bump that ships new CRDs
+      # changes the export on the next run. Nothing is committed.
+      - name: Maintain CRD baseline
+        run: |
+          mkdir -p output
+          python3 target-branch/.github/scripts/preview-baseline.py \
+            --host-kubeconfig /tmp/host-kubeconfig.yaml \
+            --vcluster-kubeconfig /tmp/vcluster-kubeconfig.yaml \
+            --index output/crd-baseline.json \
+            --output output/baseline.md
+
       # Idempotent: converges the in-vcluster ArgoCD instance on every run.
       - name: Ensure ArgoCD in vcluster
         run: |
@@ -178,6 +196,28 @@ jobs:
           kubectl -n argocd-preview label secret pr-preview-repo \
             argocd.argoproj.io/secret-type=repository --overwrite
 
+      # Render gate: validate the PR branch's changed ArgoCD manifests with
+      # ArgoCD-exact flags (helm pull + template --include-crds), catching
+      # bad versions/values/template errors before anything is deployed.
+      - name: Render gate (changed ArgoCD apps)
+        run: |
+          changed=$(git -C target-branch diff --name-only \
+            $(git -C base-branch rev-parse HEAD) \
+            $(git -C target-branch rev-parse HEAD) 2>/dev/null || \
+            git -C target-branch diff --name-only origin/main...HEAD)
+          manifests=""
+          for f in $changed; do
+            case "$f" in
+              platform/*.yaml|platform/*.yml|apps/*.yaml|apps/*.yml)
+                [ -f "target-branch/$f" ] && manifests="$manifests target-branch/$f" ;;
+            esac
+          done
+          if [ -z "$manifests" ]; then
+            echo "no changed ArgoCD manifests to render-check"
+          else
+            python3 target-branch/.github/scripts/check-argocd-apps.py $manifests
+          fi
+
       - name: Generate diff
         run: |
           argocd-diff-preview \
@@ -186,6 +226,28 @@ jobs:
             --target-branch refs/pull/${{ github.event.number }}/merge \
             --argocd-namespace=argocd-preview \
             --create-cluster=false
+
+      # Simulation: server-side dry-run of every changed app against the PR
+      # vCluster (schema/CRD validation, nothing created). Covers host-bound
+      # apps too (longhorn, cilium, issuer, ...) that can never deploy into
+      # a vCluster but whose manifests can still be validated.
+      - name: Server-side dry-run of changed apps
+        run: |
+          python3 target-branch/.github/scripts/preview-dryrun.py \
+            --base-dir base-branch \
+            --target-dir target-branch \
+            --kubeconfig /tmp/vcluster-kubeconfig.yaml \
+            --output output/dryrun.md
+
+      # Structural base-vs-target diff of bumped charts (CRDs, kinds,
+      # apiVersions, and chart CRDs vs the live cluster baseline).
+      - name: Chart upgrade structural diff
+        run: |
+          python3 target-branch/.github/scripts/preview-upgrade-diff.py \
+            --base-dir base-branch \
+            --target-dir target-branch \
+            --index output/crd-baseline.json \
+            --output output/upgrade-diff.md
 
       - name: Deploy preview apps and check health
         run: |
@@ -205,6 +267,9 @@ jobs:
         run: |
           mkdir -p output
           if [ -f output/diff.md ]; then cat output/diff.md > output/comment.md; fi
+          if [ -f output/baseline.md ]; then cat output/baseline.md >> output/comment.md; fi
+          if [ -f output/dryrun.md ]; then cat output/dryrun.md >> output/comment.md; fi
+          if [ -f output/upgrade-diff.md ]; then cat output/upgrade-diff.md >> output/comment.md; fi
           if [ -f output/preview-report.md ]; then cat output/preview-report.md >> output/comment.md; fi
           if [ ! -s output/comment.md ]; then
             echo "No diff or preview report was generated." > output/comment.md
