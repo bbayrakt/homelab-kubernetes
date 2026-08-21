@@ -84,15 +84,35 @@ on the self-hosted `homelab-runner` scale set:
    `helm upgrade --install` (chart `argo-cd` from `argoproj.github.io/argo-helm`).
 2. **Deploy:** `.github/scripts/pr-preview.py` maps the changed files to app
    directories and filters them through an allowlist of apps that can run in a
-   vCluster (no CRDs, no host infrastructure). Each changed testable app gets
-   one ArgoCD `Application` (`preview-pr-<N>-<app>`, source
-   `refs/pull/<N>/merge`, automated sync with prune + selfHeal, resources
-   finalizer). Everything else is skipped with the reason in the report.
-3. **Health:** the script waits (5 min per app) for `Synced` + `Healthy` and
+   vCluster. Each changed testable app gets one ArgoCD `Application`
+   (`preview-pr-<N>-<app>`, source `refs/pull/<N>/merge`, automated sync with
+   prune + selfHeal, resources finalizer). Everything else is skipped with the
+   reason in the report.
+
+   Chart/upgrade testing: Helm-chart apps under `platform/helm-charts/`
+   (cert-manager, external-dns, vpa) are deployed by **mirroring** the
+   committed Application manifest — the chart, `targetRevision` and values
+   under test are exactly what the PR would merge, and the report row states
+   `chart <name>@<targetRevision>`. CRDs those apps need that no chart
+   installs in-cluster (gateway API, VPA, ServiceMonitor) are copied
+   read-only from the host into the vCluster by the script (host Gateway API
+   objects are not synced into the vCluster — that sync is a vCluster.Pro
+   feature — so the preview external-dns idles by default). The preview
+   external-dns runs with the real Cloudflare token under
+   `txtOwnerId=preview` and can write DNS records for preview-local
+   resources (accepted trade-off; never fights the host instance over TXT
+   records). The vCluster serves the metrics API by proxying the host
+   metrics-server (`integrations.metricsServer.enabled: true`), so the
+   preview VPA recommender works.
+3. **Health:** the script waits (10 min per app) for `Synced` + `Healthy` and
    collects operation errors and pod crash log excerpts on failure.
 4. **Report:** one PR comment with the diff plus a per-app table:
    `Healthy` / `Degraded` / `Skipped`. The workflow fails the check when a
-   tested app is unhealthy; nothing ever touches the host cluster.
+   tested app is unhealthy. The host cluster is never mutated: preview
+   workloads, CRDs and the ArgoCD instance live inside the vCluster; host
+   access is read-only (secret/CRD reads for the preview), except that the
+   preview external-dns *may* write real Cloudflare DNS records for
+   preview-local resources (with `txtOwnerId=preview`; see `AGENTS.md`).
 
 Closing/merging the PR deletes the `preview-pr-<N>-*` Applications (the
 resources finalizer prunes the workloads). The vCluster and its Argo CD stay

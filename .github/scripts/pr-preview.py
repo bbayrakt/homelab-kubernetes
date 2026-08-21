@@ -5,26 +5,32 @@ The PR preview workflow checks out the base (main) and target
 (refs/pull/N/merge) branches and runs this script, which:
 
 1. computes the changed files and maps them to app directories
-   (platform/<app> or apps/<app>)
+   (platform/<app>, platform/helm-charts/<app> or apps/<app>)
 2. filters them against an allowlist of apps that can run in a vCluster
-   (no CRDs, no host infrastructure, no storage/credentials dependencies)
+   (no host infrastructure, no storage/credentials dependencies)
 3. creates one ArgoCD Application per changed, testable app
    (preview-pr-<N>-<app>, targetRevision refs/pull/N/merge, automated
    sync with prune + selfHeal, resources finalizer) in the ArgoCD that
-   runs inside the vCluster
-4. waits for Synced + Healthy per app, collecting the last operation
+   runs inside the vCluster; Helm-chart apps are mirrored from their
+   committed Application manifest (chart + targetRevision + values stay
+   verbatim from the PR branch)
+4. copies the CRDs the deployed apps need from the host cluster into the
+   vCluster (read-only host reads; e.g. the Gateway API CRDs that the
+   cert-manager and external-dns previews require)
+5. waits for Synced + Healthy per app, collecting the last operation
    error and pod crash details on failure
-5. writes a markdown report and exits non-zero if any tested app failed
+6. writes a markdown report and exits non-zero if any tested app failed
    to become healthy (the workflow still posts the comment)
 
-Everything talks to the vCluster through kubectl, so the script is
-dependency-free (Python stdlib only).
+Everything talks to the clusters through kubectl; the only third-party
+dependency is PyYAML for mirroring chart Applications.
 
 Usage:
     pr-preview.py --repo-url <url> --pr <number>
         --base-dir <dir> --target-dir <dir>
         [--argocd-namespace <ns>] [--kubeconfig <path>]
-        [--timeout <seconds>] [--output <path>]
+        [--host-kubeconfig <path>] [--timeout <seconds>]
+        [--output <path>]
 """
 
 import argparse
@@ -35,14 +41,71 @@ import sys
 import time
 from pathlib import Path
 
-APP_LABEL_KEY = "preview.homelab/pr"
+try:
+    import yaml
+except ImportError:
+    yaml = None
 
-# Apps that can run meaningfully inside the vCluster: plain manifests,
-# namespace-scoped workloads, no CRDs, no host-only controllers.
+APP_LABEL_KEY = "preview.homelab/pr"
+DESTINATION_SERVER = "https://kubernetes.default.svc"
+
+# Apps that can run meaningfully inside the vCluster. Helm-chart apps are
+# deployed by mirroring the committed Application manifest (see
+# mirrored_application); CRDs they need that no chart installs in-cluster
+# are supplied by ensure_crds (HOST_CRD_SUPPLY).
 ALLOWLIST = {
     "platform/metrics-server": "plain manifests, no CRDs",
     "platform/kubelet-serving-cert-approver": (
         "self-contained namespace + RBAC + Deployment"
+    ),
+    "platform/vpa": (
+        "VPA objects + recommender Service/ServiceMonitor; "
+        "inert in preview (no matching workloads)"
+    ),
+    "platform/helm-charts/cert-manager": (
+        "chart-mirror: CRDs installed by the chart in-cluster; "
+        "webhook/controller/cainjector health is the test"
+    ),
+    "platform/helm-charts/vpa": (
+        "chart-mirror: CRDs installed by the chart in-cluster; "
+        "recommendation-only, mutates nothing"
+    ),
+    "platform/helm-charts/external-dns": (
+        "chart-mirror with txtOwnerId=preview override; runs with the real "
+        "Cloudflare token, writes DNS only for preview-local resources "
+        "(accepted)"
+    ),
+}
+
+# Chart apps deployed via mirrored Application manifests (directory apps
+# use the generated manifest instead).
+CHART_APPS = {
+    "platform/helm-charts/cert-manager",
+    "platform/helm-charts/vpa",
+    "platform/helm-charts/external-dns",
+}
+
+# CRDs a preview app needs that no chart installs inside the vCluster,
+# copied read-only from the host cluster before the app is created:
+# - cert-manager 1.21+ (config.gatewayAPI.enabled) crashloops without the
+#   gateway API CRDs (it probes the gateway.networking.k8s.io group)
+# - external-dns gateway-httproute source informers need Gateway+HTTPRoute
+# - platform/vpa uses the VPA CRDs (also installed by the vpa chart app
+#   when that one is mirrored) plus a ServiceMonitor
+HOST_CRD_SUPPLY = {
+    "platform/helm-charts/cert-manager": (
+        "gatewayclasses.gateway.networking.k8s.io",
+        "gateways.gateway.networking.k8s.io",
+        "httproutes.gateway.networking.k8s.io",
+    ),
+    "platform/helm-charts/external-dns": (
+        "gateways.gateway.networking.k8s.io",
+        "httproutes.gateway.networking.k8s.io",
+    ),
+    "platform/vpa": (
+        "verticalpodautoscalers.autoscaling.k8s.io",
+        "verticalpodautoscalercheckpoints.autoscaling.k8s.io",
+        "servicemonitors.monitoring.coreos.com",
     ),
 }
 
@@ -50,10 +113,42 @@ ALLOWLIST = {
 # the report. The longest matching prefix wins.
 SKIP_PREFIXES = [
     (
+        "platform/helm-charts/gha-runner-scale-set",
+        "ARC scale set - runner registration token + real CI execution",
+    ),
+    (
+        "platform/helm-charts/gha-runner-scale-set-controller",
+        "ARC controller - CI execution infrastructure",
+    ),
+    (
+        "platform/helm-charts/grafana-cloud",
+        "Grafana Cloud credentials + host metrics/logs intake",
+    ),
+    (
+        "platform/helm-charts/hubble-observer",
+        "hubble observer - depends on host Cilium",
+    ),
+    (
+        "platform/helm-charts/longhorn",
+        "Longhorn - storage/CSI, no block devices in a vCluster",
+    ),
+    (
+        "platform/helm-charts/prometheus-operator-crds",
+        "host-scoped CRD installer (prometheus-operator CRDs)",
+    ),
+    (
+        "platform/helm-charts/spegel",
+        "spegel - mirrors host containerd registry storage",
+    ),
+    (
+        "platform/helm-charts/vcluster",
+        ("the preview vCluster itself - chart changes deploy via the host ArgoCD"),
+    ),
+    (
         "platform/helm-charts",
         (
-            "Helm chart - CRD installer or host infrastructure "
-            "(cert-manager, external-dns, Longhorn, ARC, ...)"
+            "Helm chart not on the preview allowlist (CRD installer / host "
+            "infrastructure)"
         ),
     ),
     (
@@ -77,7 +172,6 @@ DEFAULT_SKIP_REASON = (
 )
 
 REVISION_PREFIX = "refs/pull"
-DESTINATION_SERVER = "https://kubernetes.default.svc"
 
 
 def log(msg: str) -> None:
@@ -109,9 +203,16 @@ def changed_files(base_dir: Path, target_dir: Path) -> list[str]:
 
 
 def app_for_path(path: str) -> str | None:
-    """Map a changed file to its app directory (platform/x or apps/x)."""
+    """Map a changed file to its app directory (platform/x, apps/x)."""
     parts = path.split("/")
     if len(parts) >= 2 and parts[0] in ("platform", "apps") and parts[1]:
+        if (
+            parts[0] == "platform"
+            and parts[1] == "helm-charts"
+            and len(parts) >= 3
+            and parts[2]
+        ):
+            return f"platform/helm-charts/{parts[2]}"
         return f"{parts[0]}/{parts[1]}"
     return None
 
@@ -169,6 +270,74 @@ spec:
 """
 
 
+def chart_label(doc: dict) -> str:
+    """Human label of the under-test chart: <name>@<targetRevision>."""
+    source = doc["spec"].get("source") or {}
+    helm = source.get("helm") or {}
+    name = helm.get("releaseName") or source.get("chart")
+    if not name and source.get("path"):
+        name = source["path"].rstrip("/").rsplit("/", 1)[-1]
+    name = name or source.get("repoURL", "").rsplit("/", 1)[-1]
+    return f"{name}@{source.get('targetRevision') or 'latest'}"
+
+
+def mirrored_application(
+    target_dir: Path, app: str, name: str, pr: int
+) -> tuple[str, str]:
+    """Mirror a committed chart Application into a preview Application.
+
+    Loads <app>/application.yaml from the PR branch checkout and patches it
+    in place: identity (name/namespace/label/finalizer) and the standard
+    preview sync envelope (automated prune+selfHeal + retry, preserving any
+    syncOptions the app carries, e.g. CreateNamespace). spec.source,
+    spec.destination and spec.project stay verbatim, so the chart,
+    targetRevision and values under test are exactly what merges to main.
+    Returns (manifest, chart_label).
+    """
+    if yaml is None:
+        raise RuntimeError("PyYAML is required for chart apps")
+    path = target_dir / app / "application.yaml"
+    try:
+        doc = yaml.safe_load(path.read_text())
+    except FileNotFoundError:
+        raise RuntimeError(f"no application.yaml found at {app}") from None
+    meta = dict(doc.get("metadata") or {})
+    meta["name"] = name
+    meta["namespace"] = "argocd-preview"
+    meta["labels"] = {APP_LABEL_KEY: str(pr)}
+    finalizers = [
+        f
+        for f in meta.get("finalizers") or []
+        if f != "resources-finalizer.argoproj.io"
+    ]
+    finalizers.append("resources-finalizer.argoproj.io")
+    meta["finalizers"] = finalizers
+    doc["metadata"] = meta
+
+    spec = doc["spec"]
+    # Documented special case, not a generic override table: the preview
+    # external-dns registers its DNS records with txtOwnerId=preview so it
+    # never fights the host instance (owner homelab) over TXT records.
+    # ArgoCD parameters win over values, so this overrides the values block.
+    if app == "platform/helm-charts/external-dns":
+        helm = dict((spec.get("source") or {}).get("helm") or {})
+        params = [
+            p for p in helm.get("parameters") or [] if p.get("name") != "txtOwnerId"
+        ]
+        params.append({"name": "txtOwnerId", "value": "preview"})
+        helm["parameters"] = params
+        spec["source"]["helm"] = helm
+
+    sync_policy = dict(spec.get("syncPolicy") or {})
+    sync_policy["automated"] = {"prune": True, "selfHeal": True}
+    sync_policy["retry"] = {
+        "limit": 5,
+        "backoff": {"duration": "30s", "maxDuration": "5m", "factor": 2},
+    }
+    spec["syncPolicy"] = sync_policy
+    return yaml.safe_dump(doc, sort_keys=False), chart_label(doc)
+
+
 class Kubectl:
     """Thin wrapper around kubectl against the preview cluster."""
 
@@ -219,6 +388,31 @@ class Kubectl:
         if res.returncode != 0:
             return f"(no logs: {res.stderr.strip()[:200]})"
         return res.stdout.strip() or "(empty)"
+
+
+def ensure_crds(kubectl: Kubectl, host_kubectl: Kubectl | None, app: str) -> None:
+    """Copy the CRDs a preview app needs from the host into the vCluster.
+
+    Read-only on the host (get); the stripped definition (apiVersion, kind,
+    name, spec) is applied inside the vCluster. Idempotent: CRDs already
+    present in the vCluster are left alone (they may be chart-installed).
+    """
+    for name in HOST_CRD_SUPPLY[app]:
+        if kubectl.get_text("crd", name, "-o", "name"):
+            continue
+        if yaml is None:
+            raise RuntimeError("PyYAML is required")
+        if host_kubectl is None:
+            raise RuntimeError(f"{app} needs host CRDs but no host kubeconfig given")
+        raw = host_kubectl.get_json("crd", name)
+        crd = {
+            "apiVersion": raw.get("apiVersion"),
+            "kind": raw.get("kind"),
+            "metadata": {"name": raw["metadata"]["name"]},
+            "spec": raw.get("spec") or {},
+        }
+        kubectl.apply(yaml.safe_dump(crd, sort_keys=False))
+        log(f"copied CRD {name} from host into the vCluster")
 
 
 def sync_health(doc: dict) -> tuple[str | None, str | None]:
@@ -400,11 +594,17 @@ def main() -> int:
     parser.add_argument(
         "--kubeconfig", default=os.environ.get("KUBECONFIG"), help="vCluster kubeconfig"
     )
+    parser.add_argument(
+        "--host-kubeconfig",
+        default=os.environ.get("KUBECONFIG_HOST"),
+        help="host cluster kubeconfig (used to copy required CRDs)",
+    )
     parser.add_argument("--timeout", type=int, default=300, help="per-app wait (s)")
     parser.add_argument("--output", default="output/preview-report.md")
     args = parser.parse_args()
 
     kubectl = Kubectl(args.kubeconfig)
+    host_kubectl = Kubectl(args.host_kubeconfig) if args.host_kubeconfig else None
     namespace = args.argocd_namespace
     revision = f"{REVISION_PREFIX}/{args.pr}/merge"
 
@@ -426,22 +626,34 @@ def main() -> int:
         deployed.add(name)
         log(f"deploying {app} as {name} ({revision})")
         try:
-            kubectl.apply(
-                application_manifest(
+            chart = ""
+            if app in CHART_APPS:
+                manifest, label = mirrored_application(
+                    Path(args.target_dir), app, name, args.pr
+                )
+                chart = f" (chart {label})"
+            else:
+                manifest = application_manifest(
                     name, namespace, args.repo_url, app, revision, args.pr
                 )
-            )
+            if app in HOST_CRD_SUPPLY:
+                ensure_crds(kubectl, host_kubectl, app)
+            kubectl.apply(manifest)
             started = time.monotonic()
             ok, detail = wait_healthy(kubectl, namespace, name, args.timeout)
             elapsed = int(time.monotonic() - started)
             if ok:
                 rows.append(
-                    row(app, ":white_check_mark: Healthy", f"{detail} after {elapsed}s")
+                    row(
+                        app,
+                        ":white_check_mark: Healthy",
+                        f"{detail} after {elapsed}s{chart}",
+                    )
                 )
             else:
                 failed += 1
-                rows.append(row(app, ":x: Degraded", f"{detail}"))
-                failures[app] = detail
+                rows.append(row(app, ":x: Degraded", f"{detail}{chart}"))
+                failures[app] = detail + chart
         except RuntimeError as err:
             failed += 1
             rows.append(row(app, ":x: Error", str(err)))
