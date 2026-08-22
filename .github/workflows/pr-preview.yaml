@@ -111,6 +111,12 @@ jobs:
           echo "KUBECONFIG=/tmp/vcluster-kubeconfig.yaml" >> "$GITHUB_ENV"
 
       # Idempotent: converges the in-vcluster ArgoCD instance on every run.
+      # --force-conflicts: the vcluster syncer owns the helm.sh/chart label on
+      # the instance Services (its toHost service sync manages the labels it
+      # copied from the original install), so a chart version bump SSA-apply
+      # conflicts forever without it (every attempt fails; the old release
+      # never advances). Helm force-taking the field converges on the first
+      # run; later runs re-apply the same value with no conflicts.
       - name: Ensure ArgoCD in vcluster
         run: |
           for attempt in 1 2 3; do
@@ -120,6 +126,7 @@ jobs:
                 --namespace argocd-preview \
                 --create-namespace \
                 --values target-branch/.github/argocd-preview-values.yaml \
+                --force-conflicts \
                 --wait --timeout 10m; then
               break
             fi
@@ -171,6 +178,16 @@ jobs:
             --target-branch refs/pull/${{ github.event.number }}/merge \
             --argocd-namespace=argocd-preview \
             --create-cluster=false
+
+      # The runner image (ghcr.io/actions/actions-runner) ships python3 but
+      # no pip and no PyYAML; pr-preview.py needs PyYAML to mirror chart
+      # Applications (it fails with a RuntimeError without it). Same pinned
+      # setup as the pre-commit workflow.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml==6.0.3
 
       - name: Deploy preview apps and check health
         run: |
