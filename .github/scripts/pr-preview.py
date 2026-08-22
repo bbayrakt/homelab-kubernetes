@@ -396,6 +396,10 @@ def ensure_crds(kubectl: Kubectl, host_kubectl: Kubectl | None, app: str) -> Non
     Read-only on the host (get); the stripped definition (apiVersion, kind,
     name, spec) is applied inside the vCluster. Idempotent: CRDs already
     present in the vCluster are left alone (they may be chart-installed).
+
+    The api-approved.kubernetes.io annotation is carried over: the API
+    server requires it for CRDs in protected groups (e.g.
+    gateway.networking.k8s.io) and rejects creates without it.
     """
     for name in HOST_CRD_SUPPLY[app]:
         if kubectl.get_text("crd", name, "-o", "name"):
@@ -405,10 +409,18 @@ def ensure_crds(kubectl: Kubectl, host_kubectl: Kubectl | None, app: str) -> Non
         if host_kubectl is None:
             raise RuntimeError(f"{app} needs host CRDs but no host kubeconfig given")
         raw = host_kubectl.get_json("crd", name)
+        metadata = {"name": raw["metadata"]["name"]}
+        host_annotations = raw.get("metadata", {}).get("annotations") or {}
+        if "api-approved.kubernetes.io" in host_annotations:
+            metadata["annotations"] = {
+                "api-approved.kubernetes.io": host_annotations[
+                    "api-approved.kubernetes.io"
+                ]
+            }
         crd = {
             "apiVersion": raw.get("apiVersion"),
             "kind": raw.get("kind"),
-            "metadata": {"name": raw["metadata"]["name"]},
+            "metadata": metadata,
             "spec": raw.get("spec") or {},
         }
         kubectl.apply(yaml.safe_dump(crd, sort_keys=False))
@@ -423,15 +435,27 @@ def sync_health(doc: dict) -> tuple[str | None, str | None]:
 
 
 def operation_error(doc: dict) -> str | None:
+    """Failure detail from the last operation, or None while sync progresses.
+
+    ArgoCD logs progress messages ("waiting for healthy state of ...") with
+    an operation phase of Running; only terminal phases mean failure. The
+    same progress text can surface as a status condition, so it is filtered
+    there too.
+    """
     status = doc.get("status") or {}
     op = status.get("operationState") or {}
-    if op.get("message"):
-        return op["message"][:4000]
     phase = op.get("phase")
-    if phase and phase not in ("Succeeded", ""):
+    if phase in ("Failed", "Error", "Terminating"):
+        if op.get("message"):
+            return op["message"][:4000]
         return f"operation phase: {phase}"
     conditions = status.get("conditions") or []
-    msgs = [c.get("message", "") for c in conditions if c.get("message")]
+    msgs = [
+        c.get("message", "")
+        for c in conditions
+        if c.get("message")
+        and "waiting for healthy state of" not in c.get("message", "")
+    ]
     return msgs[0][:4000] if msgs else None
 
 
